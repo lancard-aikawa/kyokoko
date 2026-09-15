@@ -24,7 +24,21 @@ sys.stdout.reconfigure(encoding="utf-8")
 API = "https://commons.wikimedia.org/w/api.php"
 UA = "MachiBura/0.1 (personal video project; local use)"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-EP_DIR = os.path.join(ROOT, "episodes", "001-nagasaki-daikokumachi")
+
+# 対象の回。--ep <dir> で切り替える。指定が無ければ episodes/ の最初の回。
+def _default_ep():
+    d = os.path.join(ROOT, "episodes")
+    xs = sorted(x for x in os.listdir(d) if os.path.isdir(os.path.join(d, x)))
+    return os.path.join(d, xs[0]) if xs else d
+
+
+EP_DIR = _default_ep()
+
+
+def use_episode(path):
+    global EP_DIR
+    EP_DIR = os.path.abspath(path)
+    return EP_DIR
 
 
 def api(params):
@@ -151,6 +165,12 @@ def show():
 
 
 if __name__ == "__main__":
+    argv = sys.argv[1:]
+    if "--ep" in argv:
+        i = argv.index("--ep")
+        use_episode(argv[i + 1])
+        del argv[i:i + 2]
+    sys.argv = [sys.argv[0]] + argv
     mode = sys.argv[1] if len(sys.argv) > 1 else "list"
     if mode == "find":
         find(sys.argv[2])

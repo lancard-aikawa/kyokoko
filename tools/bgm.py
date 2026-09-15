@@ -24,7 +24,21 @@ import photos as PH  # noqa: E402
 sys.stdout.reconfigure(encoding="utf-8")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-EP_DIR = os.path.join(ROOT, "episodes", "001-nagasaki-daikokumachi")
+
+# 対象の回。--ep <dir> で切り替える。指定が無ければ episodes/ の最初の回。
+def _default_ep():
+    d = os.path.join(ROOT, "episodes")
+    xs = sorted(x for x in os.listdir(d) if os.path.isdir(os.path.join(d, x)))
+    return os.path.join(d, xs[0]) if xs else d
+
+
+EP_DIR = _default_ep()
+
+
+def use_episode(path):
+    global EP_DIR
+    EP_DIR = os.path.abspath(path)
+    return EP_DIR
 
 
 def probe(path):
@@ -63,8 +77,12 @@ def find(query, n=20):
     return out
 
 
+# BGM は回をまたいで使い回すので、回の下ではなくリポジトリ直下の assets に置く。
+BGM_DIR = os.path.join(ROOT, "assets")
+
+
 def manifest_path():
-    return os.path.join(EP_DIR, "bgm.json")
+    return os.path.join(BGM_DIR, "bgm.json")
 
 
 def load():
@@ -73,7 +91,7 @@ def load():
 
 
 def get(names):
-    d = os.path.join(EP_DIR, "bgm")
+    d = os.path.join(BGM_DIR, "bgm")
     os.makedirs(d, exist_ok=True)
     man = load()
     for name, meta in PH.info(names).items():
@@ -105,7 +123,7 @@ def get(names):
                 print("  取得できませんでした: %s" % name[:40])
                 continue
             time.sleep(2.0)
-        meta["path"] = os.path.relpath(path, EP_DIR).replace("\\", "/")
+        meta["path"] = os.path.relpath(path, BGM_DIR).replace("\\", "/")
         meta.update(probe(path))
         man[key] = meta
         print("取得: %-46s %-14s %.0f秒  平均%s" %
@@ -126,6 +144,12 @@ def show():
 
 
 if __name__ == "__main__":
+    argv = sys.argv[1:]
+    if "--ep" in argv:
+        i = argv.index("--ep")
+        use_episode(argv[i + 1])
+        del argv[i:i + 2]
+    sys.argv = [sys.argv[0]] + argv
     mode = sys.argv[1] if len(sys.argv) > 1 else "list"
     if mode == "find":
         find(sys.argv[2])

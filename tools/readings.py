@@ -3,7 +3,8 @@
 
   python tools/readings.py apply           readings.json をエンジンに流し込む（全入れ替え）
   python tools/readings.py diff [ep_dir]   補正の前後で読みがどう変わるかを見る
-  python tools/readings.py scan [ep_dir]   台詞1行ずつの読みを全部出す
+  python tools/readings.py scan [ep_dir]     台詞1行ずつの読みを全部出す
+  python tools/readings.py suspects [ep_dir] 台詞中の漢字語を全部さらって読みを並べる
   python tools/readings.py phrases "<台詞>" アクセント句と核の位置を見る
 
 **diff を必ず見ること。**ある語を直すと別の語が巻き添えで壊れる。
@@ -131,6 +132,28 @@ def phrases(text):
         print("      %s" % marks)
 
 
+def suspects(ep_dir):
+    """台詞に出てくる漢字語を全部さらって、読みを並べる。
+
+    「碑」も「側」も、指摘されるまで気づかなかった。気づいた語だけ直していては
+    取りこぼす。台詞から漢字の連なりを機械的に抜き出し、読みを付けて並べる。
+    人が目で見て変なものを拾う。辞書に入れた語には印を付けて、未確認の語を
+    見分けられるようにする。
+    """
+    import collections
+    apply_words(verbose=False)
+    known = {w["surface"] for w in load()["words"]}
+    terms = collections.Counter()
+    for line in script_lines(ep_dir):
+        for t in re.findall(r"[一-鿿々〆ヶ]{1,12}", line):
+            terms[t] += 1
+    print("漢字語 %d 種。辞書に入っていないものを中心に見ること。" % len(terms))
+    print()
+    for t, c in sorted(terms.items(), key=lambda x: (-len(x[0]), -x[1])):
+        mark = "済" if t in known else "  "
+        print("  %s %-14s x%-2d %s" % (mark, t, c, kana(t)))
+
+
 def scan(ep_dir):
     apply_words(verbose=False)
     for t in script_lines(ep_dir):
@@ -147,6 +170,8 @@ if __name__ == "__main__":
         diff(ep)
     elif mode == "scan":
         scan(ep)
+    elif mode == "suspects":
+        suspects(ep)
     elif mode == "phrases":
         phrases(sys.argv[2])
     else:

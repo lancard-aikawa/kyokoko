@@ -40,8 +40,9 @@ _scratch/
 /*.png          # Playwright の検証用スクリーンショットがここに落ちる
 
 # --- あえて入れているもの ------------------------------------------
-# episodes/*/bgm/           BGM。CC0・PD のみを置く方針なので再配布できる。
-# episodes/*/bgm.json        曲の作者・ライセンス・出典 URL。
+# assets/bgm/              BGM。CC0・PD のみを置く方針なので再配布できる。
+#                          回をまたいで使い回すので、回の下ではなくここに置く。
+# assets/bgm.json          曲の作者・ライセンス・出典 URL。
 # episodes/*/episode.json    企画（町・配役・口調・調子・BGM・間）。UI が読み書きする。
 # episodes/*/photos/        Commons の写真。CC0・PD・CC BY で再配布が許されており、
 #                           7MB 程度と軽い。これが無いと動画を作り直せないので入れる。

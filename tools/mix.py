@@ -25,8 +25,12 @@ def plan(ep_dir=EP_DIR):
     return json.load(io.open(p, encoding="utf-8")) if os.path.exists(p) else {}
 
 
-def catalog(ep_dir=EP_DIR):
-    p = os.path.join(ep_dir, "bgm.json")
+# BGM は回をまたいで共有する。リポジトリ直下の assets/ に置く。
+BGM_DIR = os.path.join(ROOT, "assets")
+
+
+def catalog(ep_dir=None):
+    p = os.path.join(BGM_DIR, "bgm.json")
     return json.load(io.open(p, encoding="utf-8")) if os.path.exists(p) else {}
 
 
@@ -62,13 +66,11 @@ def mix(narration, bgm_path, out_path, volume=0.12, fade_in=2.0, fade_out=3.5,
     return out_path
 
 
-def resolve(key, ep_dir=EP_DIR):
-    cat = catalog(ep_dir)
-    m = cat.get(key)
+def resolve(key, ep_dir=None):
+    m = catalog().get(key)
     if not m:
-        sys.exit("bgm.json に %s がありません。python tools/bgm.py list で確認を。" % key)
-    return os.path.join(ep_dir, os.path.basename(os.path.dirname(m["path"])),
-                        os.path.basename(m["path"])), m
+        sys.exit("assets/bgm.json に %s がありません。python tools/bgm.py list で確認を。" % key)
+    return os.path.join(BGM_DIR, m["path"].replace("/", os.sep)), m
 
 
 def bgm_for(ep, ep_dir=EP_DIR):

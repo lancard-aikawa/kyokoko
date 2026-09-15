@@ -6,6 +6,8 @@
   python tools/build.py all          全話を作り、通しも1本にまとめる
   python tools/build.py remux        絵はそのままに音声だけ差し替える（速い）
 
+  --ep <dir> で対象の回を指定する（既定は episodes/ の最初の回）。
+
   既定では立ち絵を出さない。--chara を付けたときだけ入る。
 
   立ち絵はキャラごとの規約が厳しい。調べた 5 権利者のうち 4 つが法人利用を
@@ -25,8 +27,25 @@ import clip
 import mix
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-EP_DIR = os.path.join(ROOT, "episodes", "001-nagasaki-daikokumachi")
+
+
+def _default_ep():
+    d = os.path.join(ROOT, "episodes")
+    xs = sorted(x for x in os.listdir(d) if os.path.isdir(os.path.join(d, x)))
+    return os.path.join(d, xs[0]) if xs else d
+
+
+EP_DIR = _default_ep()
 OUT = os.path.join(EP_DIR, "out")
+
+
+def use_episode(path):
+    """対象の回を切り替える。--ep <dir> で指定する。"""
+    global EP_DIR, OUT
+    EP_DIR = os.path.abspath(path)
+    OUT = os.path.join(EP_DIR, "out")
+    mix.EP_DIR = EP_DIR
+    return EP_DIR
 
 
 def all_lines():
@@ -123,7 +142,8 @@ def join(eps):
     with io.open(lst, "w", encoding="utf-8") as f:
         for p in made:
             f.write("file '%s'\n" % p.replace("\\", "/"))
-    full = os.path.join(OUT, "nagasaki-daikokumachi.mp4")
+    # 通しの名前は回から取る。回ごとに違うので直書きしない。
+    full = os.path.join(OUT, "%s.mp4" % os.path.basename(EP_DIR))
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst,
                     "-c", "copy", full], capture_output=True, check=True)
     os.remove(lst)
@@ -131,6 +151,20 @@ def join(eps):
 
 
 USE_CHARA = False
+
+
+def chapters():
+    """その回にある話番号。episode.json の chapters から引く。
+
+    回によって話数が違うので、番号を直書きしない。
+    """
+    p = os.path.join(EP_DIR, "episode.json")
+    if os.path.exists(p):
+        d = json.load(io.open(p, encoding="utf-8"))
+        ns = [c["n"] for c in d.get("chapters", [])]
+        if ns:
+            return sorted(ns)
+    return [0, 1, 2, 3, 99]
 
 
 def build(eps):
@@ -150,19 +184,25 @@ def build(eps):
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if a not in ("--chara", "--no-chara")]
-    USE_CHARA = "--chara" in sys.argv
+    argv = sys.argv[1:]
+    if "--ep" in argv:
+        i = argv.index("--ep")
+        use_episode(argv[i + 1])
+        del argv[i:i + 2]
+        print("対象: %s" % EP_DIR)
+    args = [a for a in argv if a not in ("--chara", "--no-chara")]
+    USE_CHARA = "--chara" in argv
     print("立ち絵: %s" % ("あり（--chara）" if USE_CHARA else "なし（既定）"))
     arg = args[0] if args else "all"
     if arg == "check":
         check()
     elif arg == "remux":
-        if not remux([0, 1, 2, 3, 99]):
+        if not remux(chapters()):
             sys.exit(1)
     elif arg == "all":
-        build([0, 1, 2, 3, 99])
+        build(chapters())
     else:
         eps = [int(a) for a in args]
         build(eps)
         if len(eps) < 3:
-            join([0, 1, 2, 3, 99])   # 一部だけ作り直したときも通しはつなぎ直す
+            join(chapters())   # 一部だけ作り直したときも通しはつなぎ直す
