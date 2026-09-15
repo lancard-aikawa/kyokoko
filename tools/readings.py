@@ -62,15 +62,20 @@ def apply_words(verbose=True):
     cfg = load()
     clear()
     for w in cfg["words"]:
+        # 品詞は既定で固有名詞。ただし「日本人」のように組み込み辞書の語と
+        # 品詞がぶつかると、priority 10 でも負ける。そのときだけ type で切り替える。
         req("/user_dict_word", {"surface": w["surface"], "pronunciation": w["kana"],
-                                "accent_type": w["accent"], "word_type": "PROPER_NOUN",
+                                "accent_type": w["accent"],
+                                "word_type": w.get("type", "PROPER_NOUN"),
                                 "priority": 10}, "POST")
     if verbose:
         print("%d 語を登録しました" % len(cfg["words"]))
     return cfg
 
 
-RUBY_RE = re.compile(r"([一-鿿゠-ヿ々〆ヶ・ー]+)《([^《》]+)》")
+# tts.py と同じ形にしておく。アクセント指定 《ひ^1》 の ^1 を落とさないと、
+# 読みが「ヒ、イチ」になって、碑の出てくる行が全部おかしく見える。
+RUBY_RE = re.compile(r"([一-鿿゠-ヿ々〆ヶ・ー]+)《([^《》^]+)(?:\^(\d+))?》")
 
 
 def script_lines(ep_dir):
@@ -147,14 +152,36 @@ def suspects(ep_dir):
     for line in script_lines(ep_dir):
         for t in re.findall(r"[一-鿿々〆ヶ]{1,12}", line):
             terms[t] += 1
-    print("漢字語 %d 種。辞書に入っていないものを中心に見ること。" % len(terms))
+    print("漢字語 %d 種。" % len(terms))
     print()
     for t, c in sorted(terms.items(), key=lambda x: (-len(x[0]), -x[1])):
         mark = "済" if t in known else "  "
         print("  %s %-14s x%-2d %s" % (mark, t, c, kana(t)))
+    print()
+    print("※ 語を単独で読ませているので、文脈で決まる読みはここでは出ない。")
+    print("   「同じ人」は単独なら正しいのに「同じ人たち」で ドオジジンタチ になり、")
+    print("   「雨が降りました」は オリマシタ になった。どちらも語単位では見えない。")
+    print("   合成の前に scan も通して、行ごとの読みを目で追うこと。")
 
 
 def scan(ep_dir):
+    """台詞を 1 行ずつ、文章と読みを並べて出す。
+
+    語単位の suspects では文脈で決まる読みを拾えない。フラグメントを切り出して
+    単独で読ませても、切った時点で文脈が消えるので意味がない。結局、行をそのまま
+    読ませて人が目で追うのがいちばん確実。行数はたかだか百程度なので追える。
+    """
+    apply_words(verbose=False)
+    lines = script_lines(ep_dir)
+    print("%d 行。文章と読みを見比べて、合わないものを拾う。" % len(lines))
+    print()
+    for i, t in enumerate(lines, 1):
+        print("%3d %s" % (i, t))
+        print("    %s" % kana(t))
+
+
+def _unused_scan(ep_dir):
+
     apply_words(verbose=False)
     for t in script_lines(ep_dir):
         print(t)
