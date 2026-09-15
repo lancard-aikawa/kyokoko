@@ -18,9 +18,26 @@ FONT_B = "C:/Windows/Fonts/BIZ-UDGothicB.ttc"
 FONT_R = "C:/Windows/Fonts/BIZ-UDGothicR.ttc"
 
 ATTRIB = "出典: 国土地理院（地理院タイル）"
+
+# 字幕の色と立ち絵を出す側。episode.json の cast から読む（無ければこの既定）。
+# 掛け合いなので左右に分けると、どちらが喋っているか一目でわかる。
 COLORS = {"つむぎ": (255, 214, 120), "朱司": (150, 210, 255)}
-# 立ち絵を出す側。掛け合いなので左右に分けると、どちらが喋っているか一目でわかる。
 SIDE = {"つむぎ": "right", "朱司": "left"}
+
+
+def load_plan(ep_dir):
+    """episode.json を読んで、字幕の色と立ち絵の左右を差し替える。"""
+    import json
+    p = os.path.join(ep_dir, "episode.json") if ep_dir else None
+    if not p or not os.path.exists(p):
+        return {}
+    plan = json.load(open(p, encoding="utf-8"))
+    for who, c in (plan.get("cast") or {}).items():
+        if c.get("color"):
+            COLORS[who] = tuple(c["color"])
+        if c.get("side"):
+            SIDE[who] = c["side"]
+    return plan
 ACCENT = (255, 90, 60)
 
 
@@ -217,6 +234,31 @@ def draw_title(frame, d, shot, t, W, H):
                   (255, 255, 255, int(255 * fade)), anchor="mm", hw=3, fade=fade)
 
 
+def draw_credits(frame, d, shot, t, W, H):
+    """エンディングの出典・クレジット。画を落として左寄せで並べる。"""
+    cr = shot.get("credits")
+    if not cr or not (cr["from"] <= t <= cr["to"]):
+        return
+    fade = min(1.0, (t - cr["from"]) / 0.8, (cr["to"] - t) / 0.8)
+    if fade <= 0.01:
+        return
+    d.rectangle([0, 0, W, H], fill=(0, 0, 0, int(cr.get("dim", 165) * fade)))
+    f_h = ImageFont.truetype(FONT_B, 30)
+    f_b = ImageFont.truetype(FONT_R, 25)
+    x, y = int(W * 0.17), int(H * 0.17)
+    for kind, text in cr["lines"]:
+        if kind == "h":
+            y += 16
+            draw_text(d, (x, y), text, f_h, (255, 255, 255, int(255 * fade)), hw=3, fade=fade)
+            y += 42
+        elif kind == "gap":
+            y += 18
+        else:
+            draw_text(d, (x + 26, y), text, f_b, (232, 232, 228, int(255 * fade)),
+                      hw=2, fade=fade)
+            y += 34
+
+
 def draw_subtitle(d, timeline, t, W, H, fonts):
     f_sub, f_name = fonts
     cur = [r for r in timeline if r["start"] - 0.15 <= t <= r["end"] + 0.25]
@@ -290,6 +332,7 @@ def render_photo_shot(shot, timeline, photos, out_path, size=(1920, 1080), fps=3
         draw_text(d, (W - 24, H - band - 30), cred, f_small,
                   (255, 255, 255, 235), anchor="ra")
         draw_title(frame, d, shot, t, W, H)
+        draw_credits(frame, d, shot, t, W, H)
         p.stdin.write(frame.tobytes())
     p.stdin.close()
     p.wait()
@@ -385,6 +428,7 @@ def render_shot(shot, timeline, out_path, size=(1920, 1080), fps=30, quiet=True,
         draw_subtitle(d, timeline, t, W, H, (f_sub, f_name))
         draw_text(d, (W - 24, 22), ATTRIB, f_small, (255, 255, 255, 230), anchor="ra")
         draw_title(frame, d, shot, t, W, H)
+        draw_credits(frame, d, shot, t, W, H)
         p.stdin.write(frame.tobytes())
 
     p.stdin.close()
@@ -404,6 +448,7 @@ def load_photos(ep_dir):
 
 def build_episode(shots, timeline, audio, out_path, size=(1920, 1080), fps=30, ep_dir=None,
                   use_chara=True):
+    load_plan(ep_dir)
     photos = load_photos(ep_dir) if ep_dir else None
     chara = load_chara(ep_dir) if (ep_dir and use_chara) else {}
     env = voice_envelope(audio, fps) if chara else ()

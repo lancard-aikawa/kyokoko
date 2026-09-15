@@ -191,12 +191,28 @@
 
 ---
 
+---
+
+## エンディング
+
+締め。次の町へ続く余韻を置いて、出典とクレジットを流す。
+
+### カット9-1 大黒町から引く
+
+つむぎ｜次は、どの町に行きましょうか。
+朱司｜碑《ひ^1》は、たいていの町にありますよ。
+つむぎ｜ぜんぶ回ったら、何年かかるんでしょうね。
+朱司｜さあ。まずは、足元から。
+
+---
+
 ## クレジット（動画概要欄）
 
 ```
 音声: VOICEVOX:春日部つむぎ / VOICEVOX:雀松朱司(CV:狐狗狸ラク)
 地図: 出典 国土地理院（地理院タイル）
 　　　https://maps.gsi.go.jp/development/ichiran.html
+音楽: Wilfredor / CC0（Wikimedia Commons）
 写真: Wikimedia Commons より
 　　　二十六聖人記念碑 © Nesnad / CC BY 4.0
 　　　記念碑と聖フィリッポ教会 © Balon Greyjoy / CC0

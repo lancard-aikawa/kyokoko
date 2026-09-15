@@ -22,6 +22,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import clip
+import mix
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EP_DIR = os.path.join(ROOT, "episodes", "001-nagasaki-daikokumachi")
@@ -65,6 +66,22 @@ def check():
             print("ep%d shot%d  %5.1f秒地点  -> %s" % (ep, i + 1, mid, os.path.basename(png)))
 
 
+def audio_for(ep, shots):
+    """その話に使う音声。BGM が割り当てられていればミックスして返す。
+
+    長さは映像に合わせる。語りより映像が長い回（タイトルやクレジットが出る
+    アバンとエンディング）で、BGM だけが先に止まるのを防ぐため。
+    """
+    nar = os.path.join(OUT, "ep%d.wav" % ep)
+    src, meta = mix.bgm_for(ep, EP_DIR)
+    if not src:
+        return nar
+    out = os.path.join(OUT, "ep%d_mixed.wav" % ep)
+    vol = (mix.plan(EP_DIR).get("bgm") or {}).get("volume", 0.12)
+    mix.mix(nar, src, out, volume=vol, limit=shots[-1]["t1"])
+    return out
+
+
 def timing_key(ep):
     """映像づくりに効く値だけを並べた指紋。これが同じなら絵は描き直さなくていい。"""
     return json.dumps([[r["index"], r["start"], r["end"], r["text"], r["speaker"]]
@@ -89,7 +106,7 @@ def remux(eps):
     for ep in eps:
         mp4 = os.path.join(OUT, "ep%d.mp4" % ep)
         tmp = mp4 + ".tmp.mp4"
-        subprocess.run(["ffmpeg", "-y", "-i", mp4, "-i", os.path.join(OUT, "ep%d.wav" % ep),
+        subprocess.run(["ffmpeg", "-y", "-i", mp4, "-i", audio_for(ep, load_shots()[ep]),
                         "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac",
                         "-b:a", "192k", "-shortest", tmp], capture_output=True, check=True)
         os.replace(tmp, mp4)
@@ -99,7 +116,7 @@ def remux(eps):
 
 
 def join(eps):
-    made = [os.path.join(OUT, "ep%d.mp4" % e) for e in eps]
+    made = [os.path.join(OUT, "ep%d.mp4" % e) for e in sorted(eps)]
     if len(made) < 2:
         return
     lst = os.path.join(OUT, "_all.txt")
@@ -120,7 +137,7 @@ def build(eps):
     shots = load_shots()
     made = []
     for ep in eps:
-        audio = os.path.join(OUT, "ep%d.wav" % ep)
+        audio = audio_for(ep, shots[ep])
         out = os.path.join(OUT, "ep%d.mp4" % ep)
         print("第%d話 を作ります" % ep)
         clip.build_episode(shots[ep], timeline(ep), audio, out, ep_dir=EP_DIR,
@@ -140,12 +157,12 @@ if __name__ == "__main__":
     if arg == "check":
         check()
     elif arg == "remux":
-        if not remux([0, 1, 2, 3]):
+        if not remux([0, 1, 2, 3, 99]):
             sys.exit(1)
     elif arg == "all":
-        build([0, 1, 2, 3])
+        build([0, 1, 2, 3, 99])
     else:
         eps = [int(a) for a in args]
         build(eps)
         if len(eps) < 3:
-            join([0, 1, 2, 3])   # 一部だけ作り直したときも通しはつなぎ直す
+            join([0, 1, 2, 3, 99])   # 一部だけ作り直したときも通しはつなぎ直す

@@ -35,6 +35,43 @@ MICHI = [KYOTO, (34.690, 135.500), (34.820, 134.690), (34.660, 133.920),
          (33.590, 130.400), (33.260, 130.300), NAGASAKI]
 
 
+def credit_lines(ep_dir=None):
+    """出典の一覧を組み立てる。photos.json を読むので素材を替えれば自動で変わる。"""
+    import json
+    import os
+    base = ep_dir or os.path.dirname(os.path.abspath(__file__))
+    out = [("h", "音声"),
+           ("b", "VOICEVOX:春日部つむぎ"),
+           ("b", "VOICEVOX:雀松朱司（CV:狐狗狸ラク）"),
+           ("gap", ""),
+           ("h", "地図"),
+           ("b", "出典 国土地理院（地理院タイル）"),
+           ("gap", ""),
+           ("h", "写真 — Wikimedia Commons")]
+    plan = os.path.join(base, "episode.json")
+    if os.path.exists(plan):
+        b = (json.load(open(plan, encoding="utf-8")).get("bgm") or {})
+        if b.get("default") and b.get("credit"):
+            out += [("gap", ""), ("h", "音楽"), ("b", b["credit"])]
+
+    p = os.path.join(base, "photos.json")
+    if os.path.exists(p):
+        man = json.load(open(p, encoding="utf-8"))
+        seen = set()
+        for m in man.values():
+            a = (m.get("author") or "不明").strip()
+            # Commons のメタデータは作者名が二重になっていることがある
+            # （"Unknown authorUnknown author" など）ので畳む
+            h = len(a) // 2
+            if h and a[:h] == a[h:]:
+                a = a[:h]
+            line = "%s / %s" % (a, m.get("license") or "?")
+            if line not in seen:
+                seen.add(line)
+                out.append(("b", line))
+    return out
+
+
 def build(timeline):
     """timeline.json の全行を受け取り、エピソード番号 -> ショット一覧 を返す。"""
     S = {r["index"]: r["start"] for r in timeline}
@@ -270,4 +307,19 @@ def build(timeline):
               notes=[note("石に刻む代わりに、毎年、担ぐことにした", T(104, 0.5), TE(104, 1.0))]),
     ]
 
-    return {0: ep0, 1: ep1, 2: ep2, 3: ep3}
+    # --- エンディング ---------------------------------------------------
+    ep99 = [
+        # 9-1 大黒町からゆっくり引いて、長崎の全体へ。最後に出典を出す
+        {"t0": 0.0, "t1": TE(110, 9.0), "zoom": 15,
+         "camera": [[0.0, 32.7524, 129.8712, 0.72], [TE(110, 2.0), 32.7470, 129.8680, 1.15],
+                    [TE(110, 9.0), 32.7440, 129.8660, 1.25]],
+         "layers": [pale, hill([[0.0, 0.35]])],
+         "labels": [lb("大黒町", DAIKOKU, 0.6)],
+         "title": {"main": "まちぶら", "sub": "第001回　長崎市大黒町 —「海だった駅前」",
+                   "from": TE(110, 0.6), "to": TE(110, 4.2), "size": 96, "subsize": 36,
+                   "dim": 140, "y": 0.40},
+         "credits": {"lines": credit_lines(), "from": TE(110, 4.6), "to": TE(110, 8.6),
+                     "dim": 180}},
+    ]
+
+    return {0: ep0, 1: ep1, 2: ep2, 3: ep3, 99: ep99}

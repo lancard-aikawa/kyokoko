@@ -32,24 +32,31 @@ ENGINE = "http://127.0.0.1:50021"
 #     それまで accent の変更がまったく音に反映されていなかった。
 SYNTH_VERSION = 2
 
-# voice.json が無いときの既定。話者名 -> VOICEVOX スタイル ID と声のつまみ。
-DEFAULT_VOICE = {
-    "つむぎ": {"speaker": 8,  "speedScale": 0.98, "intonationScale": 1.0, "pitchScale": 0.0},
-    "朱司":   {"speaker": 52, "speedScale": 0.98, "intonationScale": 1.0, "pitchScale": 0.0},
-}
+# 企画（配役・間の取り方・BGM）は episode.json が持つ。
+# 会話で決めたことの置き場所であり、ブラウザUI の「企画」タブが読み書きする。
+def load_plan(ep_dir):
+    p = os.path.join(ep_dir, "episode.json")
+    if os.path.exists(p):
+        return json.load(io.open(p, encoding="utf-8"))
+    return {}
 
-# 前後の余白（秒）。頭を 0 にすると、再生開始直後や AAC のプライミングで
-# 最初の一音が欠けることがある。尻も同様に、言い終わりが切れて聞こえる。
-LEAD_IN = 0.40
-TAIL = 0.90
 
-# 行間の無音（秒）
-GAP_SAME = 0.35      # 同じ話者が続くとき
-GAP_SWITCH = 0.55    # 話者が変わるとき
-GAP_CUT = 1.20       # カットをまたぐとき
+def cast_of(plan):
+    """話者名 -> 合成の既定値。episode.json の cast から作る。"""
+    out = {}
+    for who, c in (plan.get("cast") or {}).items():
+        out[who] = {k: c[k] for k in
+                    ("speaker", "speedScale", "intonationScale", "pitchScale") if k in c}
+    return out
+
+# 前後の余白と行間の無音（秒）。episode.json の timing で上書きできる。
+# 頭を 0 にすると再生開始直後や AAC のプライミングで最初の一音が欠ける。
+LEAD_IN, TAIL = 0.40, 0.90
+GAP_SAME, GAP_SWITCH, GAP_CUT = 0.35, 0.55, 1.20
 
 LINE_RE = re.compile(r"^([^｜\[\s]+)｜(.+)$")
-EP_RE = re.compile(r"^##\s*(?:第(\d+)話|(アバン))")   # アバンは第0話あつかい
+EP_RE = re.compile(r"^##\s*(?:第(\d+)話|(アバン)|(エンディング))")
+# アバンは第0話、エンディングは第99話あつかい（番号順に並べると前後に来る）
 CUT_RE = re.compile(r"^###\s")
 
 # 読みのその場指定。 碑《ひ》 と書くと、字幕は「碑」・読み上げは「ひ」になる。
@@ -79,8 +86,10 @@ def split_ruby(s):
     return RUBY_RE.sub(r"\1", s), RUBY_RE.sub(r"\2", s), accents
 
 
-def parse(path):
-    """script.md を読んで行の一覧を返す。"""
+def parse(path, speakers=None):
+    """script.md を読んで行の一覧を返す。speakers は話者名の集合。"""
+    speakers = speakers or set(cast_of(load_plan(os.path.dirname(path))) or
+                               {"つむぎ", "朱司"})
     rows = []
     ep, cut = None, 0
     with io.open(path, encoding="utf-8") as f:
@@ -88,13 +97,14 @@ def parse(path):
             line = raw.rstrip("\n")
             m = EP_RE.match(line)
             if m:
-                ep, cut = (int(m.group(1)) if m.group(1) else 0), 0
+                ep = int(m.group(1)) if m.group(1) else (0 if m.group(2) else 99)
+                cut = 0
                 continue
             if CUT_RE.match(line):
                 cut += 1
                 continue
             m = LINE_RE.match(line.strip())
-            if m and ep is not None and m.group(1) in ("つむぎ", "朱司"):
+            if m and ep is not None and m.group(1) in speakers:
                 shown, read, accents = split_ruby(m.group(2).strip())
                 # ルビの書き方を間違えると読み文だけが短くなる。黙って合成すると
                 # 台詞が欠けた音声ができてしまうので、ここで気づけるようにする。
@@ -111,9 +121,14 @@ def parse(path):
 
 def load_voice(ep_dir):
     p = os.path.join(ep_dir, "voice.json")
-    if os.path.exists(p):
-        return json.load(io.open(p, encoding="utf-8"))
-    return {"defaults": DEFAULT_VOICE, "lines": {}}
+    cfg = json.load(io.open(p, encoding="utf-8")) if os.path.exists(p) else {}
+    cfg.setdefault("lines", {})
+    # 既定は episode.json の cast。voice.json 側に defaults があればそちらを優先する
+    base = cast_of(load_plan(ep_dir))
+    for who, v in (cfg.get("defaults") or {}).items():
+        base.setdefault(who, {}).update(v)
+    cfg["defaults"] = base
+    return cfg
 
 
 def save_voice(ep_dir, cfg):
@@ -277,6 +292,14 @@ def readings_fingerprint():
 
 
 def run(ep_dir, quiet=False):
+    global LEAD_IN, TAIL, GAP_SAME, GAP_SWITCH, GAP_CUT
+    tm = (load_plan(ep_dir).get("timing") or {})
+    LEAD_IN = tm.get("lead_in", LEAD_IN)
+    TAIL = tm.get("tail", TAIL)
+    GAP_SAME = tm.get("gap_same", GAP_SAME)
+    GAP_SWITCH = tm.get("gap_switch", GAP_SWITCH)
+    GAP_CUT = tm.get("gap_cut", GAP_CUT)
+
     script = os.path.join(ep_dir, "script.md")
     out = os.path.join(ep_dir, "out")
     lines_dir = os.path.join(out, "lines")
