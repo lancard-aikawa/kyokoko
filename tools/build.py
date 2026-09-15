@@ -5,6 +5,7 @@
   python tools/build.py 1            第1話だけ作る（2 3 のように複数指定も可）
   python tools/build.py all          全話を作り、通しも1本にまとめる
   python tools/build.py remux        絵はそのままに音声だけ差し替える（速い）
+  python tools/build.py compact      公開用に軽くした複製を作る（--hevc でさらに半分）
 
   --ep <dir> で対象の回を指定する（既定は episodes/ の最初の回）。
 
@@ -150,6 +151,40 @@ def join(eps):
     print("通し -> %s" % full)
 
 
+def compact(hevc=False, crf=None):
+    """公開用に軽くした複製を作る。out/ の通しは高画質のまま残す。
+
+    絵は地理院タイルと写真なので、H.264 CRF 19 で描くと 7〜12 Mbps になる。
+    細かいのは地図の文字だけで、それは CRF を落としても崩れない
+    （実測: CRF 23 でも 5px の町名が読める。SSIM 0.989）。
+
+    YouTube に上げるだけなら縮めなくてよい。向こうで再圧縮されるので、
+    先に削っておくと二重圧縮になるだけ。ファイルそのものを配るときに使う。
+    """
+    src = os.path.join(OUT, "%s.mp4" % os.path.basename(EP_DIR))
+    if not os.path.exists(src):
+        print("通しがありません。先に build してください: %s" % src)
+        return False
+    if hevc:
+        # H.265。同じ見た目で H.264 の半分だが、再生側が選ぶ。
+        v = ["-c:v", "libx265", "-preset", "medium", "-crf", str(crf or 26),
+             "-tag:v", "hvc1"]
+        suffix = "-hevc"
+    else:
+        v = ["-c:v", "libx264", "-preset", "slow", "-crf", str(crf or 23)]
+        suffix = "-web"
+    out = os.path.join(OUT, "%s%s.mp4" % (os.path.basename(EP_DIR), suffix))
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", src] + v +
+                   ["-pix_fmt", "yuv420p",
+                    # 音声はすでにモノラル 24kHz の 98kbps。触っても減らない
+                    "-c:a", "copy",
+                    "-movflags", "+faststart", out], check=True)
+    a, b = os.path.getsize(src), os.path.getsize(out)
+    print("%s -> %s" % (os.path.basename(src), os.path.basename(out)))
+    print("  %.0fMB -> %.0fMB (%.0f%%減)" % (a / 1048576, b / 1048576, (1 - b / a) * 100))
+    return True
+
+
 USE_CHARA = False
 
 
@@ -190,7 +225,7 @@ if __name__ == "__main__":
         use_episode(argv[i + 1])
         del argv[i:i + 2]
         print("対象: %s" % EP_DIR)
-    args = [a for a in argv if a not in ("--chara", "--no-chara")]
+    args = [a for a in argv if a not in ("--chara", "--no-chara", "--hevc")]
     USE_CHARA = "--chara" in argv
     print("立ち絵: %s" % ("あり（--chara）" if USE_CHARA else "なし（既定）"))
     arg = args[0] if args else "all"
@@ -198,6 +233,9 @@ if __name__ == "__main__":
         check()
     elif arg == "remux":
         if not remux(chapters()):
+            sys.exit(1)
+    elif arg == "compact":
+        if not compact(hevc="--hevc" in argv):
             sys.exit(1)
     elif arg == "all":
         build(chapters())
