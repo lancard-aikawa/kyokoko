@@ -138,6 +138,131 @@ def build_one(ep_dir):
     return m
 
 
+PAGE_HEAD = """<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>まちぶら</title>
+<meta name="description" content="町の碑をめぐる読み上げ動画。地理院タイルと VOICEVOX で作っています。">
+<link rel="icon" href="favicon.svg">
+<style>
+:root{
+  --bg:#12141a; --card:#1b1e26; --line:#2b3040;
+  --fg:#e8e6e1; --dim:#9aa0ad; --accent:#c9a227;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;
+  line-height:1.8; -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:900px; margin:0 auto; padding:0 20px 80px}
+header{padding:72px 0 40px; border-bottom:1px solid var(--line)}
+h1{
+  margin:0; font-size:clamp(38px,9vw,64px); letter-spacing:.22em;
+  font-weight:600; text-indent:.22em;
+}
+.lead{margin:20px 0 0; color:var(--dim); font-size:15px; max-width:34em}
+article{padding:52px 0; border-bottom:1px solid var(--line)}
+h2{margin:0 0 4px; font-size:clamp(19px,4vw,25px); font-weight:600; line-height:1.5}
+.meta{margin:0 0 22px; color:var(--dim); font-size:13px; letter-spacing:.06em}
+video{
+  width:100%; display:block; background:#000; border-radius:6px;
+  border:1px solid var(--line);
+}
+.cap{margin:10px 0 0; color:var(--dim); font-size:12.5px}
+ol{margin:24px 0 0; padding-left:1.4em; color:var(--fg)}
+ol li{margin:.35em 0; font-size:15px}
+ol li::marker{color:var(--accent); font-variant-numeric:tabular-nums}
+.dl{
+  display:inline-block; margin-top:26px; padding:11px 22px;
+  border:1px solid var(--accent); border-radius:4px;
+  color:var(--accent); text-decoration:none; font-size:14px;
+}
+.dl:hover{background:var(--accent); color:var(--bg)}
+.dl small{display:block; font-size:11px; opacity:.75; letter-spacing:.04em}
+footer{padding:44px 0 0; color:var(--dim); font-size:12.5px}
+footer h3{margin:0 0 12px; font-size:13px; color:var(--fg); font-weight:600;
+  letter-spacing:.1em}
+footer ul{margin:0; padding-left:1.2em}
+footer li{margin:.3em 0}
+footer a{color:var(--dim)}
+@media (prefers-color-scheme: light){
+  :root{--bg:#faf8f4; --card:#fff; --line:#e0dcd4; --fg:#20222a;
+        --dim:#6b6f7a; --accent:#8a6d1f;}
+}
+</style>
+<div class="wrap">
+<header>
+<h1>まちぶら</h1>
+<p class="lead">〒や町名を指定すると、その町の遺構・歴史建造物・地名の由来にまつわる
+「碑」の話を集め、読み上げシナリオを作り、地図と VOICEVOX で動画にしています。</p>
+</header>
+"""
+
+PAGE_FOOT = """<footer>
+<h3>出典</h3>
+<ul>
+<li>地図 — 出典 国土地理院（<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>）</li>
+<li>碑文 — 出典 国土地理院（自然災害伝承碑）</li>
+<li>音声 — VOICEVOX:春日部つむぎ / VOICEVOX:雀松朱司(CV:狐狗狸ラク)</li>
+<li>写真 — Wikimedia Commons（作者とライセンスは各回の photos.json）</li>
+</ul>
+</footer>
+</div>
+"""
+
+
+FAVICON = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<rect width="64" height="64" rx="10" fill="#12141a"/>
+<text x="32" y="45" font-size="42" text-anchor="middle" fill="#c9a227"
+ font-family="serif">碑</text>
+</svg>
+"""
+
+
+def esc(t):
+    return (t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+             .replace('"', "&quot;"))
+
+
+def html(ms, repo=None):
+    """gallery/index.html。GitHub Pages で見る用。
+
+    README.md からプレビューに張ったリンクは blob 画面に飛んでしまうので、
+    その場で再生できる面を別に用意する。preload="none" にしてあるので、
+    開いただけでは動画を取りに行かない（Pages の帯域を使わない）。
+    本編は Releases 側なので、そもそも Pages の帯域には乗らない。
+    """
+    rel = "../../releases/tag/%s"
+    if repo:
+        rel = "https://github.com/" + repo + "/releases/tag/%s"
+    out = [PAGE_HEAD]
+    for m in ms:
+        mm, ss = int(m["duration"] // 60), int(m["duration"] % 60)
+        d = m["dir"]
+        out.append(
+            '<article>\n'
+            '<h2>%s</h2>\n'
+            '<p class="meta">%s　%d分%02d秒</p>\n'
+            '<video controls preload="none" playsinline poster="%s/poster.jpg">\n'
+            '  <source src="%s/preview.mp4" type="video/mp4">\n'
+            '</video>\n'
+            '<p class="cap">アバン（冒頭）だけの抜粋です。</p>\n'
+            % (esc(m["heading"]), esc(m["town"]), mm, ss, d, d))
+        out.append("<ol>\n%s\n</ol>\n" %
+                   "\n".join("<li>%s</li>" % esc(c) for c in m["chapters"]))
+        out.append('<a class="dl" href="%s">本編をダウンロード'
+                   '<small>1920x1080 / H.264 / MP4</small></a>\n</article>\n'
+                   % (rel % d))
+    out.append(PAGE_FOOT)
+    pth = os.path.join(GALLERY, "index.html")
+    io.open(pth, "w", encoding="utf-8").write("".join(out))
+    # Jekyll に触らせない。index.html をそのまま出したいだけなので
+    io.open(os.path.join(GALLERY, ".nojekyll"), "w", encoding="utf-8").write("")
+    io.open(os.path.join(GALLERY, "favicon.svg"), "w", encoding="utf-8").write(FAVICON)
+    print("page  -> %s" % pth)
+
+
 def index(ms):
     """gallery/README.md。GitHub の Releases に置いた本編へ誘導する。"""
     L = ["# まちぶら",
@@ -175,6 +300,7 @@ def index(ms):
     p = os.path.join(GALLERY, "README.md")
     io.open(p, "w", encoding="utf-8").write("\n".join(L))
     print("index -> %s" % p)
+    html(ms, REPO)
 
 
 REPO = "lancard-aikawa/machibura-gallery"
