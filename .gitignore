@@ -1,0 +1,47 @@
+# 判断の基準は 2 つ。
+#   1. 配ってよいものか（二次配布が禁じられた素材は入れない）
+#   2. 作り直せるものか（作り直せて重いものは入れない）
+
+# --- 配ってはいけないもの ------------------------------------------
+# 立ち絵の元データ（Live2D モデル・PSD）はどれも二次配布禁止。
+# ここから書き出した PNG も派生物なので同じ扱いにする。
+download/
+episodes/*/chara/*
+!episodes/*/chara/README.md
+
+# --- 作り直せる中間生成物 ------------------------------------------
+# 音声・動画・タイムライン・確認用の静止画。1GB を超えるので入れない。
+#   python tools/tts.py    で音声とタイムライン
+#   python tools/build.py  で動画
+episodes/*/out/
+
+# 地理院タイルのキャッシュと、規約の写し。取り直せる。
+.cache/
+
+# --- 環境まわり ----------------------------------------------------
+.playwright-mcp/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Windows / エディタ
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# 作業中に散らかりがちなもの
+*.tmp
+*.log
+_scratch/
+
+# --- あえて入れているもの ------------------------------------------
+# episodes/*/photos/        Commons の写真。CC0・PD・CC BY で再配布が許されており、
+#                           7MB 程度と軽い。これが無いと動画を作り直せないので入れる。
+# episodes/*/photos.json    写真の作者・ライセンス・出典 URL。権利の根拠なので必須。
+# episodes/*/voice.json     語りの調整値。ブラウザUI が書き出す設定。
+# episodes/*/shots.py       ショットの構図定義。
+# tools/readings.json       読みの補正辞書。
