@@ -56,6 +56,11 @@ GAP_SAME, GAP_SWITCH, GAP_CUT = 0.35, 0.55, 1.20
 
 LINE_RE = re.compile(r"^([^｜\[\s]+)｜(.+)$")
 EP_RE = re.compile(r"^##\s*(?:第(\d+)話|(アバン)|(エンディング))")
+# 「間｜3.0」で任意の秒数の無音を差す。クエスチョンのシンキングタイム用。
+# 行そのものは増やさず、次の台詞の gap_before に化けさせる。行を増やすと
+# 台詞番号が全部ずれて、shots.py の T(n)/TE(n) がまとめて壊れる。
+# シンキングタイムの開始と終わりは TE(問いの行) 〜 T(答えの行) で取れる。
+PAUSE_RE = re.compile(r"^間｜([0-9.]+)\s*$")
 # アバンは第0話、エンディングは第99話あつかい（番号順に並べると前後に来る）
 CUT_RE = re.compile(r"^###\s")
 
@@ -92,6 +97,7 @@ def parse(path, speakers=None):
                                {"つむぎ", "朱司"})
     rows = []
     ep, cut = None, 0
+    pending_pause = 0.0
     with io.open(path, encoding="utf-8") as f:
         for raw in f:
             line = raw.rstrip("\n")
@@ -103,6 +109,10 @@ def parse(path, speakers=None):
             if CUT_RE.match(line):
                 cut += 1
                 continue
+            m = PAUSE_RE.match(line.strip())
+            if m:
+                pending_pause = float(m.group(1))
+                continue
             m = LINE_RE.match(line.strip())
             if m and ep is not None and m.group(1) in speakers:
                 shown, read, accents = split_ruby(m.group(2).strip())
@@ -113,7 +123,9 @@ def parse(path, speakers=None):
                         "読み文が字幕文より極端に短い。ルビの書き方を確認すること。\n"
                         "  字幕: %s\n  読み: %s" % (shown, read))
                 rows.append({"episode": ep, "cut": cut, "speaker": m.group(1),
-                             "text": shown, "read": read, "ruby_accents": accents})
+                             "text": shown, "read": read, "ruby_accents": accents,
+                             "pause": pending_pause})
+                pending_pause = 0.0
     for i, r in enumerate(rows, 1):
         r["index"] = i
     return rows
@@ -337,6 +349,9 @@ def run(ep_dir, quiet=False):
         p = prev.get(ep)
         gap = 0.0 if p is None else (GAP_CUT if p[0] != r["cut"]
                                      else GAP_SWITCH if p[1] != who else GAP_SAME)
+        # 台本で指定した間があればそちらを使う（話の頭では入れない）
+        if p is not None and r.get("pause"):
+            gap = r["pause"]
         prev[ep] = (r["cut"], who)
 
         item = {"index": i, "episode": ep, "cut": r["cut"], "speaker": who,

@@ -234,6 +234,54 @@ def draw_title(frame, d, shot, t, W, H):
                   (255, 255, 255, int(255 * fade)), anchor="mm", hw=3, fade=fade)
 
 
+def draw_question(frame, d, shot, t, W, H):
+    """クエスチョンの札。出題からシンキングタイムの終わりまで出したままにする。
+
+    タイトルと違って画を暗く落としすぎない。問いを読みながら現地の絵も
+    見ていてほしいので、札を真ん中に置いて背景は軽く沈める程度にとどめる。
+    残り時間のバーを下に引く。無音が続く理由が画で分かるようにするため。
+    """
+    q = shot.get("question")
+    if not q or not (q["from"] <= t <= q["to"]):
+        return
+    a, b = q["from"], q["to"]
+    fade = min(1.0, (t - a) / 0.45, (b - t) / 0.45)
+    if fade <= 0.01:
+        return
+    d.rectangle([0, 0, W, H], fill=(0, 0, 0, int(q.get("dim", 96) * fade)))
+
+    lines = q["text"] if isinstance(q["text"], list) else [q["text"]]
+    f_q = ImageFont.truetype(FONT_B, q.get("size", 60))
+    f_tag = ImageFont.truetype(FONT_B, 34)
+    lh = q.get("size", 60) + 22
+    box_h = 150 + lh * len(lines)
+    box_w = int(max([d.textlength(x, font=f_q) for x in lines]) + 140)
+    box_w = max(box_w, 640)
+    x0 = (W - box_w) // 2
+    y0 = int(H * q.get("y", 0.30))
+
+    d.rectangle([x0, y0, x0 + box_w, y0 + box_h], fill=(12, 14, 20, int(228 * fade)))
+    d.rectangle([x0, y0, x0 + box_w, y0 + box_h],
+                outline=(214, 176, 66, int(255 * fade)), width=3)
+    # 見出しの帯
+    d.rectangle([x0, y0, x0 + box_w, y0 + 62], fill=(214, 176, 66, int(240 * fade)))
+    draw_text(d, (x0 + box_w // 2, y0 + 31), q.get("tag", "クエスチョン"), f_tag,
+              (16, 18, 24, int(255 * fade)), anchor="mm", hw=0, fade=fade)
+    for i, ln in enumerate(lines):
+        draw_text(d, (x0 + box_w // 2, y0 + 96 + lh // 2 + lh * i), ln, f_q,
+                  (255, 255, 255, int(255 * fade)), anchor="mm", hw=3, fade=fade)
+
+    # 考える時間のバー。think が無ければ出さない
+    th = q.get("think")
+    if th and th[0] <= t <= th[1]:
+        left = 1.0 - (t - th[0]) / max(0.001, th[1] - th[0])
+        bx0, bx1 = x0 + 40, x0 + box_w - 40
+        by = y0 + box_h - 36
+        d.rectangle([bx0, by, bx1, by + 8], fill=(255, 255, 255, int(46 * fade)))
+        d.rectangle([bx0, by, bx0 + (bx1 - bx0) * left, by + 8],
+                    fill=(214, 176, 66, int(240 * fade)))
+
+
 def draw_credits(frame, d, shot, t, W, H):
     """エンディングの出典・クレジット。画を落として左寄せで並べる。"""
     cr = shot.get("credits")
@@ -335,6 +383,7 @@ def render_photo_shot(shot, timeline, photos, out_path, size=(1920, 1080), fps=3
         # 出典は字幕帯の上に。CC BY / CC BY-SA は表示が義務。
         draw_text(d, (W - 24, H - band - 30), cred, f_small,
                   (255, 255, 255, 235), anchor="ra")
+        draw_question(frame, d, shot, t, W, H)
         draw_title(frame, d, shot, t, W, H)
         draw_credits(frame, d, shot, t, W, H)
         p.stdin.write(frame.tobytes())
@@ -431,6 +480,7 @@ def render_shot(shot, timeline, out_path, size=(1920, 1080), fps=30, quiet=True,
         d = ImageDraw.Draw(frame, "RGBA")
         draw_subtitle(d, timeline, t, W, H, (f_sub, f_name))
         draw_text(d, (W - 24, 22), ATTRIB, f_small, (255, 255, 255, 230), anchor="ra")
+        draw_question(frame, d, shot, t, W, H)
         draw_title(frame, d, shot, t, W, H)
         draw_credits(frame, d, shot, t, W, H)
         p.stdin.write(frame.tobytes())
