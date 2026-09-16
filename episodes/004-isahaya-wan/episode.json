@@ -1,0 +1,103 @@
+{
+  "_comment": [
+    "この回の企画。Claude との会話で決めたことをここに集める。",
+    "ブラウザUI の「企画」タブが読み書きする。",
+    "行ごとの細かい調整は voice.json、文章とふりがなは script.md、",
+    "ショットの構図は shots.py が持つ。ここはその上流。"
+  ],
+  "id": "004-isahaya-wan",
+  "program": "まちぶら",
+  "town": {
+    "name": "諫早市 諫早公園・諫早湾",
+    "postal": "854-0011",
+    "center": [
+      32.845417,
+      130.049083
+    ],
+    "note": "本明川と有明海。満潮時に川の水が出られない土地。潮受堤防7km"
+  },
+  "title": "出口のない水",
+  "mood": "第001〜003回と同じ調子。死者586人を扱うが湿っぽくしない。開門をめぐる争いは、どちらが正しいかを言わない。事実と年月日を置き、「開門すれば制裁金、開門しなければ制裁金」が実際に並んだことを示し、2023年に非開門で統一されたところまで書いて、地形の話に戻る。芯は「流されなかった橋が場所を失った」という第002回の裏返し。",
+  "cast": {
+    "つむぎ": {
+      "role": "探訪役",
+      "speaker": 8,
+      "label": "春日部つむぎ / ノーマル",
+      "tone": "敬体・明るい・短い。現地で気づき、素朴に驚き、問いを投げる",
+      "color": [
+        255,
+        214,
+        120
+      ],
+      "side": "right",
+      "speedScale": 0.98,
+      "intonationScale": 1.0,
+      "pitchScale": 0.0,
+      "credit": "VOICEVOX:春日部つむぎ"
+    },
+    "朱司": {
+      "role": "案内人",
+      "speaker": 52,
+      "label": "雀松朱司 / ノーマル",
+      "tone": "敬体・落ち着き・やや講義調。地形と歴史を解きほぐし、答えを出す",
+      "color": [
+        150,
+        210,
+        255
+      ],
+      "side": "left",
+      "speedScale": 0.98,
+      "intonationScale": 1.0,
+      "pitchScale": 0.0,
+      "credit": "VOICEVOX:雀松朱司(CV:狐狗狸ラク)"
+    }
+  },
+  "chapters": [
+    {
+      "n": 0,
+      "key": "アバン",
+      "title": "",
+      "bgm": null
+    },
+    {
+      "n": 1,
+      "key": "第1話",
+      "title": "流されなかった橋",
+      "bgm": null
+    },
+    {
+      "n": 2,
+      "key": "第2話",
+      "title": "出口が塞がる土地",
+      "bgm": null
+    },
+    {
+      "n": 3,
+      "key": "第3話",
+      "title": "湾を閉じる",
+      "bgm": null
+    },
+    {
+      "n": 99,
+      "key": "エンディング",
+      "title": "",
+      "bgm": null
+    }
+  ],
+  "timing": {
+    "lead_in": 0.4,
+    "tail": 0.9,
+    "gap_same": 0.35,
+    "gap_switch": 0.55,
+    "gap_cut": 1.2
+  },
+  "bgm": {
+    "policy": "表示義務のないもの（CC0 相当）に限る。立ち絵で踏んだのと同じ理由で、法人利用や宣伝利用で詰まらないようにする。",
+    "default": "Ambient_music_test__Yamaha_CK61_flac.flac",
+    "volume": 0.12,
+    "duck": 0.5,
+    "credit": "Wilfredor / CC0（Wikimedia Commons）"
+  },
+  "theme": "地形",
+  "style": "クエスチョン"
+}
