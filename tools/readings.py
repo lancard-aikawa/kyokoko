@@ -188,6 +188,91 @@ def _unused_scan(ep_dir):
         print("   ", kana(t))
 
 
+# 一度直したのに、次の回でまた素の漢字に戻して同じ誤読を出した語。
+# 辞書では直せない（どちらの読みも正しい／活用形だけ壊れる）ので、
+# 台本を書く側が気をつけるしかない。気をつけるのは無理なので、ここで止める。
+# 正規表現は「行全体」に当てる。前後の語で正誤が決まるものは、
+# 手がかりの語が同じ行にあるときだけ拾う（電車を降りる／手間・隙間 は正しい）。
+TRAPS = [
+    (r"[^ぁ-ん]の方[がをにはでのへ、。]", None,
+     "「〜の方」は のほう/のかた が割れる。かな で開く", "のかた または のほう"),
+    (r"降り(まし|ましょ|ます)", r"雨|雪|豪雨|降水|土砂降",
+     "「雨が降りました」は オリマシタ になる（「降ると」は正しい）", "降《ふ》りました"),
+    (r"[^ぁ-ん]他[がをにはのへ、。]", None,
+     "「他」は ほか/た が割れる。かな で開く", "ほか"),
+    (r"(の間|この間|その間|合間)[がをにはのへ、。]", None,
+     "「〜の間」は あいだ/ま/かん が割れる。かな で開く", "あいだ"),
+]
+
+
+def check(ep_dir):
+    """合成の前に、台本を機械で見る。
+
+    2つ見る。
+    1. **踏み直しやすい語**。「〜の方」や「降りました」は、一度直しても
+       次の回で素の漢字に戻すと同じ誤読が出る。人の注意力に頼らない。
+    2. **オウム返し**。直前の台詞から語をそのまま借りて体言止めで置く返しが
+       何回あるか。1回なら驚き、5回並ぶと相槌マシンに見える。
+
+    誤読の疑いが1つでもあれば終了コード1で落とす。合成の前に気づくため。
+    """
+    import re as _re
+    p = os.path.join(ep_dir, "script.md")
+    rows = []
+    for raw in io.open(p, encoding="utf-8"):
+        m = _re.match(r"^(\S+)｜(.+)$", raw.strip())
+        if m:
+            rows.append((m.group(1), RUBY_RE.sub(r"", m.group(2)), m.group(2)))
+
+    bad = 0
+    print("■ 踏み直しやすい語")
+    for i, (who, shown, raw) in enumerate(rows, 1):
+        for pat, need, why, how in TRAPS:
+            if _re.search(pat, raw) and (need is None or _re.search(need, raw)):
+                bad += 1
+                print("  %3d %s" % (i, shown[:54]))
+                print("      %s  →  %s" % (why, how))
+    if not bad:
+        print("  なし")
+
+    print()
+    print("■ オウム返し（直前の台詞から語を借りて体言止め）")
+    def core(x):
+        return _re.sub(r"[。、！？…「」　 ]", "", x)
+    echo = []
+    for i in range(1, len(rows)):
+        who, cur, _ = rows[i]
+        pw, prev, _ = rows[i - 1]
+        if who == pw:
+            continue
+        c, pv = core(cur), core(prev)
+        if not c or len(c) > 14:
+            continue
+        best = ""
+        for a in range(len(c)):
+            for b in range(a + 2, len(c) + 1):
+                if c[a:b] in pv and (b - a) > len(best):
+                    best = c[a:b]
+        # 感嘆符・疑問符が付くものは「反応」なので数えない。
+        # 借りた語を疑問や言い換えに変えているものも、型が違うので外す。
+        if _re.search(r"[！？]", cur):
+            continue
+        if _re.search(r"(というと|ってこと|んですね|んですか|ですか)", cur):
+            continue
+        if best and len(best) >= max(2, len(c) * 0.45):
+            echo.append((i + 1, who, cur, best))
+    for n, who, cur, b in echo:
+        print("  %3d %s｜%s   ← 借りた語「%s」" % (n, who, cur, b))
+    print("  %d 件。1話あたり1回までが目安。多いときは返しの型を散らす"
+          % len(echo))
+    print("  ※ 引用の反芻や、意図した繰り返しはここに出る。人が見て選ぶこと")
+    print("  （借りて評価を足す／自分の言葉に言い換える／疑問にする／黙る）")
+
+    if bad:
+        print()
+        sys.exit("誤読の疑いが %d 件。直してから合成すること。" % bad)
+
+
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "apply"
     ep = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_EP
@@ -195,6 +280,8 @@ if __name__ == "__main__":
         apply_words()
     elif mode == "diff":
         diff(ep)
+    elif mode == "check":
+        check(ep)
     elif mode == "scan":
         scan(ep)
     elif mode == "suspects":
