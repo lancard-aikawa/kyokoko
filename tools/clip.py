@@ -288,8 +288,12 @@ def render_photo_shot(shot, timeline, photos, out_path, size=(1920, 1080), fps=3
     f_note = ImageFont.truetype(FONT_B, 38)
     f_small = ImageFont.truetype(FONT_R, 20)
 
-    # 画面いっぱいに使えるよう、足りない側に合わせて拡大しておく
-    k = max(W / src.width, H / src.height) * 1.25
+    # 画面いっぱいに使えるよう、足りない側に合わせて拡大しておく。
+    # 余裕はショットがいちばん寄るところから決める。ここを定数にしておくと、
+    # それを超える kb を書いたとき crop が画像からはみ出し、PIL が黒で埋める。
+    # エラーにならないので、書き出した動画を見るまで気づけない。
+    zmax = max([float(r[1]) for r in shot.get("kb", []) if len(r) > 1] or [1.25])
+    k = max(W / src.width, H / src.height) * max(zmax, 1.05)
     base = src.resize((int(src.width * k), int(src.height * k)), Image.LANCZOS)
 
     cmd = ["ffmpeg", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
