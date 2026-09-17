@@ -48,6 +48,7 @@ python tools/build.py --ep <ep_dir> all      本編
 | `town.center` | `[緯度, 経度]`。`new.py` が住所検索から入れる |
 | `town.note` | この回の芯。あとで読み返すためのメモ |
 | `title` | 回の題。ギャラリーとタイトルカードの副題に出る |
+| `youtube` | 公開したら動画 ID を入れる（`f7xuXU-avK0` の形）。ギャラリーと README のリンクに出る。空なら出ない。`gallery.py youtube` が「公開済み」と表示する |
 | `mood` | 調子と方針。断定しないこと・伏せること・数字の扱い |
 | `cast` | 話者ごとの設定。下の表 |
 | `chapters` | 話の一覧。`n` が話番号で、`0`=アバン / `99`=エンディング |

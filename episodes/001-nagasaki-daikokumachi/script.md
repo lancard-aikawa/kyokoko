@@ -220,7 +220,7 @@
 　　　本蓮寺 © 先従隗始 / CC0
 　　　出島 © Fg2 / Public domain
 　　　長崎駅（現在） © Houjyou-Minori / CC0
-　　　長崎駅（大正期・1912年竣工の駅舎） © Unknown authorUnknown author / Public domain
+　　　長崎駅（大正期・1912年竣工の駅舎） © Unknown author / Public domain
 ```
 
 ## 収録前チェック

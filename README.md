@@ -16,9 +16,9 @@
 本編の動画は各回の **[Releases](https://github.com/lancard-aikawa/kokogallery/releases)**
 から（1920x1080 / H.264 / MP4）。
 
-| 回 | 町 | 題 | 尺 | テーマ／形式 | |
+| 回 | 町 | 題 | 尺 | テーマ／形式 | 見る |
 |---|---|---|---|---|---|
-| 001 | 長崎市大黒町 | [海だった駅前](https://lancard-aikawa.github.io/kokogallery/#001-nagasaki-daikokumachi) | 9分53秒 | 石碑 | [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/001-nagasaki-daikokumachi) |
+| 001 | 長崎市大黒町 | [海だった駅前](https://lancard-aikawa.github.io/kokogallery/#001-nagasaki-daikokumachi) | 9分53秒 | 石碑 | **[YouTube](https://youtu.be/f7xuXU-avK0)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/001-nagasaki-daikokumachi) |
 | 002 | 長崎市 眼鏡橋 | [流されないための橋](https://lancard-aikawa.github.io/kokogallery/#002-nagasaki-meganebashi) | 7分04秒 | 石碑 | [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/002-nagasaki-meganebashi) |
 | 003 | 佐世保市 針尾送信所 | [つき固めた百年](https://lancard-aikawa.github.io/kokogallery/#003-sasebo-hario) | 8分23秒 | 土木／クエスチョン | [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/003-sasebo-hario) |
 | 004 | 諫早市 諫早湾 | [出口のない水](https://lancard-aikawa.github.io/kokogallery/#004-isahaya-wan) | 8分14秒 | 地形／クエスチョン | [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/004-isahaya-wan) |

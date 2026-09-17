@@ -65,6 +65,20 @@ def strip_html(s):
     return " ".join(s.split())
 
 
+def undup(a):
+    """同じ文字列が2回続いていたら1回に畳む。
+
+    Commons の Artist は、リンクと表示名の両方を持つ書き方をしている画像で
+    タグを外すと「Unknown authorUnknown author」のように二重になる。
+    第001回の写真クレジットが実際にこの形で**焼き込まれて公開された**。
+    shots.py の credit_lines も同じ処理をしているが、あちらは表示のときだけで、
+    photos.json と clip.py の画面クレジットには生の値が残っていた。取得時に畳む。
+    """
+    a = (a or "").strip()
+    h = len(a) // 2
+    return a[:h] if h and a[:h] == a[h:] else a
+
+
 def info(titles):
     """ファイル名の一覧 -> ライセンス等のメタ情報"""
     titles = [t if t.startswith("File:") else "File:" + t for t in titles]
@@ -78,7 +92,7 @@ def info(titles):
         out[name] = {
             "file": name,
             "license": strip_html(em.get("LicenseShortName", {}).get("value")),
-            "author": strip_html(em.get("Artist", {}).get("value")),
+            "author": undup(strip_html(em.get("Artist", {}).get("value"))),
             "credit": strip_html(em.get("Credit", {}).get("value")),
             "url": ii.get("url"),
             "page": "https://commons.wikimedia.org/wiki/" + urllib.parse.quote(

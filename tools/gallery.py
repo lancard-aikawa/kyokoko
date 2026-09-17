@@ -124,6 +124,8 @@ def meta(ep_dir):
     no = name.split("-")[0]
     return {"dir": name, "no": no, "town": town,
             "title": p.get("title") or name,
+            # 公開したら episode.json の youtube に動画 ID を入れる。空なら出さない
+            "youtube": (p.get("youtube") or "").strip(),
             # 「第002回 長崎市 眼鏡橋（中島川）—「流されないための橋」」
             "heading": "第%s回 %s —「%s」" % (no, town, p.get("title") or name),
             "duration": dur,
@@ -189,6 +191,13 @@ ol li::marker{color:var(--accent); font-variant-numeric:tabular-nums}
 }
 .dl:hover{background:var(--accent); color:var(--bg)}
 .dl small{display:block; font-size:11px; opacity:.75; letter-spacing:.04em}
+.yt{
+  display:inline-block; margin:26px 12px 0 0; padding:11px 22px;
+  border:1px solid var(--accent); border-radius:4px; background:var(--accent);
+  color:var(--bg); text-decoration:none; font-size:14px; font-weight:600;
+}
+.yt:hover{opacity:.85}
+.yt small{display:block; font-size:11px; opacity:.8; font-weight:400; letter-spacing:.04em}
 footer{padding:44px 0 0; color:var(--dim); font-size:12.5px}
 footer h3{margin:0 0 12px; font-size:13px; color:var(--fg); font-weight:600;
   letter-spacing:.1em}
@@ -268,6 +277,12 @@ def html(ms, repo=None):
             % (d, d, esc(m["heading"]), esc(m["town"]), mm, ss, d, d))
         out.append("<ol>\n%s\n</ol>\n" %
                    "\n".join("<li>%s</li>" % esc(c) for c in m["chapters"]))
+        # YouTube に上げてあれば、まずそこへ誘導する。300MB の
+        # ダウンロードしか案内が無いと、その場で見る手立てが無い。
+        if m.get("youtube"):
+            out.append('<a class="yt" href="https://youtu.be/%s">YouTube で見る'
+                       '<small>チャプターつき</small></a>\n'
+                       % esc(m["youtube"]))
         out.append('<a class="dl" href="%s">本編をダウンロード'
                    '<small>1920x1080 / H.264 / MP4</small></a>\n</article>\n'
                    % (rel % d))
@@ -305,10 +320,12 @@ def index(ms):
               "%d分%02d秒" % (mm, ss), ""]
         for i, c in enumerate(m["chapters"], 1):
             L.append("%d. %s" % (i, c))
-        L += ["",
-              "[本編をダウンロード](../../releases/tag/%s)　/　"
-              "[プレビュー（%s）](%s/preview.mp4)" % (m["dir"], "アバン", m["dir"]),
-              ""]
+        links = []
+        if m.get("youtube"):
+            links.append("**[YouTube で見る](https://youtu.be/%s)**" % m["youtube"])
+        links.append("[本編をダウンロード](../../releases/tag/%s)" % m["dir"])
+        links.append("[プレビュー（アバン）](%s/preview.mp4)" % m["dir"])
+        L += ["", "　/　".join(links), ""]
     L += ["---", "",
           "## 出典", "",
           "- 地図: 出典 国土地理院（地理院タイル）",
@@ -468,6 +485,30 @@ def srt(ep_dir):
     return p
 
 
+def thumb_candidates(ep_dir, total):
+    """YouTube が出す自動サムネイル候補に近いフレームを書き出す。
+
+    カスタムサムネイルは電話番号の確認が要る。未確認のうちは YouTube が
+    自動で選んだ3枚から選ぶことになり、**タイトルカードは候補に入らない**
+    （25% / 50% / 75% あたりが目安で、アバンの外にある）。
+    どれを選ぶかは先に手元で見比べたほうが早い。
+    """
+    outs = []
+    src = os.path.join(ep_dir, "out", "%s.mp4" % os.path.basename(ep_dir))
+    for frac in (0.25, 0.50, 0.75):
+        t = total * frac
+        o = os.path.join(ep_dir, "out", "thumb-%02d.jpg" % int(frac * 100))
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "%.2f" % t, "-i", src,
+                        "-frames:v", "1", "-vf", "scale=1280:-2:flags=lanczos",
+                        "-q:v", "3", o], check=True)
+        outs.append((frac, t, o))
+    print("         自動候補の目安（この3枚から選ぶことになる）:")
+    for frac, t, o in outs:
+        print("           %3d%%  %d:%02d  %s"
+              % (frac * 100, t // 60, t % 60, os.path.relpath(o, ROOT)))
+    return outs
+
+
 def youtube(ep_dir):
     """YouTube に上げるための材料を出す。概要欄はそのまま貼れる形にする。"""
     name = os.path.basename(ep_dir)
@@ -487,6 +528,10 @@ def youtube(ep_dir):
     print("タイトル")
     print("=" * 66)
     print("%s %s" % (plan.get("program", ""), m["heading"]))
+    if (plan.get("youtube") or "").strip():
+        print("")
+        print("公開済み: https://youtu.be/%s" % plan["youtube"].strip())
+        print("（episode.json の youtube に入っている。ギャラリーのリンクにも出る）")
     print("")
     print("=" * 66)
     print("概要欄（ここから下をそのまま貼る）")
@@ -523,6 +568,9 @@ def youtube(ep_dir):
         except Exception:
             wh = ("?", "?")
         print("  サムネ %s  (%sx%s)" % (poster_p, wh[0], wh[1]))
+        print("         ※ カスタムサムネイルには電話番号の確認が要る。")
+        print("           未確認だと YouTube が出す自動候補3枚から選ぶことになる。")
+        thumb_candidates(ep_dir, total)
     else:
         print("  サムネ なし。python tools/gallery.py build --ep %s" % ep_dir)
     srt(ep_dir)
