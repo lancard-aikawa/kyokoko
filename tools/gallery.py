@@ -6,6 +6,8 @@
   python tools/gallery.py index              gallery/README.md を書く
   python tools/gallery.py release            本編を GitHub Releases に上げる
   python tools/gallery.py release --ep <dir> 1回だけ
+  python tools/gallery.py youtube --ep <dir> YouTube 用の材料（概要欄・チャプター・字幕）
+  python tools/gallery.py srt     --ep <dir> 字幕ファイルだけ書く
 
 動画そのものは git に入れない。GitHub は 1 ファイル 100MB で push が弾かれる
 うえに、git は全バージョンを永久に持つ。動画は差分圧縮が効かないので、
@@ -48,6 +50,10 @@ def episodes():
 def plan(ep_dir):
     p = os.path.join(ep_dir, "episode.json")
     return json.load(io.open(p, encoding="utf-8")) if os.path.exists(p) else {}
+
+
+# youtube() の中で plan を変数名に使うので、関数には別名でも触れるようにする
+plan_of = plan
 
 
 def title_moment(ep_dir):
@@ -379,6 +385,152 @@ def release(ep_dir, repo=None):
     return True
 
 
+def probe(path, key):
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=" + key,
+                        "-of", "default=nw=1:nk=1", path], capture_output=True, text=True)
+    try:
+        return float(r.stdout.strip())
+    except ValueError:
+        return 0.0
+
+
+def chapter_offsets(ep_dir):
+    """話ごとの開始秒（通しの中での絶対秒）を返す。
+
+    通しは ep0.mp4, ep1.mp4, ... を順に連結したものなので、先行する話の
+    **映像の長さ**を足せば開始秒になる。音声の長さではない（アバンは
+    タイトルの分、エンディングはクレジットの分だけ映像が長い）。
+    """
+    plan = plan_of(ep_dir)
+    out = []
+    t = 0.0
+    for c in sorted(plan.get("chapters") or [], key=lambda x: x["n"]):
+        f = os.path.join(ep_dir, "out", "ep%d.mp4" % c["n"])
+        if not os.path.exists(f):
+            continue
+        out.append((t, c.get("title") or c.get("key") or "第%d話" % c["n"], c["n"]))
+        t += probe(f, "duration")
+    return out, t
+
+
+def mmss(t):
+    return "%d:%02d" % (t // 60, t % 60)
+
+
+def script_credits(ep_dir):
+    """script.md の「## クレジット（動画概要欄）」の中身。人が書いたもの。"""
+    import re
+    p = os.path.join(ep_dir, "script.md")
+    if not os.path.exists(p):
+        return ""
+    t = io.open(p, encoding="utf-8").read()
+    m = re.search(r"## クレジット[^" + NL + r"]*" + NL + r"+```" + NL + r"(.*?)" + NL + r"```",
+                  t, re.S)
+    return m.group(1).strip() if m else ""
+
+
+def srt(ep_dir):
+    """通しに合わせた字幕ファイルを書く。out/<回>.srt
+
+    字幕は絵に焼き込んであるので、映像としては要らない。要るのは
+    **YouTube の中で検索に乗ること**と、自動翻訳が効くこと。焼き込みの
+    文字は画像なので、いまは1文字も検索に引っかからない。
+
+    注意: 視聴者が字幕を ON にすると、焼き込みと二重に出る。
+    """
+    tl = os.path.join(ep_dir, "out", "timeline.json")
+    if not os.path.exists(tl):
+        print("  timeline.json がありません。先に合成してください")
+        return None
+    rows = json.load(io.open(tl, encoding="utf-8"))
+    offs, _ = chapter_offsets(ep_dir)
+    base = {n: t for t, _, n in offs}
+
+    def stamp(t):
+        h, rem = divmod(t, 3600)
+        m, s = divmod(rem, 60)
+        return "%02d:%02d:%02d,%03d" % (h, m, int(s), round((s - int(s)) * 1000))
+
+    lines = []
+    k = 0
+    for r in sorted(rows, key=lambda x: (x["episode"], x["start"])):
+        if r["episode"] not in base:
+            continue
+        o = base[r["episode"]]
+        k += 1
+        lines += ["%d" % k,
+                  "%s --> %s" % (stamp(o + r["start"]), stamp(o + r["end"])),
+                  "%s：%s" % (r["speaker"], r["text"]),
+                  ""]
+    p = os.path.join(ep_dir, "out", "%s.srt" % os.path.basename(ep_dir))
+    io.open(p, "w", encoding="utf-8", newline=NL).write(NL.join(lines))
+    print("  字幕   %s  (%d行)" % (os.path.relpath(p, ROOT), k))
+    return p
+
+
+def youtube(ep_dir):
+    """YouTube に上げるための材料を出す。概要欄はそのまま貼れる形にする。"""
+    name = os.path.basename(ep_dir)
+    m = meta(ep_dir)
+    plan = plan_of(ep_dir)
+    full = os.path.join(ep_dir, "out", "%s.mp4" % name)
+    web = os.path.join(ep_dir, "out", "%s%s.mp4" % (name, DIST_SUFFIX))
+    poster_p = os.path.join(GALLERY, name, "poster.jpg")
+
+    if not os.path.exists(full):
+        print("通しがありません: %s" % full)
+        print("  python tools/build.py --ep %s all" % ep_dir)
+        return 1
+
+    offs, total = chapter_offsets(ep_dir)
+    print("=" * 66)
+    print("タイトル")
+    print("=" * 66)
+    print("%s %s" % (plan.get("program", ""), m["heading"]))
+    print("")
+    print("=" * 66)
+    print("概要欄（ここから下をそのまま貼る）")
+    print("=" * 66)
+    body = ["（ここに2〜3行の紹介を書く。研究メモの「なぜここか」から起こすとよい）",
+            "", "チャプター"]
+    for t, label, _ in offs:
+        body.append("%s %s" % (mmss(t), label))
+    cr = script_credits(ep_dir)
+    if cr:
+        body += ["", cr]
+    body += ["",
+             "制作環境: https://github.com/%s" % SOURCE_REPO,
+             "ギャラリー: https://lancard-aikawa.github.io/kokogallery/#%s" % name]
+    print(NL.join(body))
+    print("")
+    print("=" * 66)
+    print("上げるもの")
+    print("=" * 66)
+    br = probe(full, "bit_rate") / 1e6
+    print("  動画   %s" % full)
+    print("         %d:%02d / %.0fMB / %.1f Mbps / 1920x1080"
+          % (total // 60, total % 60, os.path.getsize(full) / 1048576, br))
+    if br > 12:
+        print("         ※ 12 Mbps を超えている。YouTube の 1080p30 推奨は 8 Mbps")
+    if os.path.exists(web):
+        print("  ※ %s%s.mp4 は**上げない**。YouTube 側で再圧縮されるので二重圧縮になる"
+              % (name, DIST_SUFFIX))
+        print("     あれは Releases で直接配るためのもの")
+    if os.path.exists(poster_p):
+        try:
+            from PIL import Image
+            wh = Image.open(poster_p).size
+        except Exception:
+            wh = ("?", "?")
+        print("  サムネ %s  (%sx%s)" % (poster_p, wh[0], wh[1]))
+    else:
+        print("  サムネ なし。python tools/gallery.py build --ep %s" % ep_dir)
+    srt(ep_dir)
+    print("         ※ 字幕は焼き込み済み。SRT は検索と自動翻訳のため。")
+    print("           視聴者が字幕を ON にすると二重に出るので、上げるかは選ぶ")
+    return 0
+
+
 if __name__ == "__main__":
     argv = sys.argv[1:]
     eps = episodes()
@@ -392,6 +544,15 @@ if __name__ == "__main__":
             release(e)
     elif mode == "index":
         index([meta(e) for e in eps])
+    elif mode == "youtube":
+        rc = 0
+        for e in eps:
+            rc |= youtube(e) or 0
+        sys.exit(rc)
+    elif mode == "srt":
+        for e in eps:
+            print(os.path.basename(e))
+            srt(e)
     else:
         ms = [build_one(e) for e in eps]
         index(ms if len(eps) > 1 else [meta(e) for e in episodes()])

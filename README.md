@@ -159,7 +159,21 @@ gallery/        公開用のポスターとプレビュー。別リポジトリ�
    python tools/build.py --ep episodes/00N-... check
    ```
 
-7. **動画にする**
+7. **YouTube に上げる材料を出す**（公開するとき）
+
+   ```
+   python tools/gallery.py youtube --ep episodes/00N-...
+   ```
+
+   タイトル・概要欄（チャプターつき）・上げるファイル・サムネイル・字幕を出す。
+   **上げるのは `out/<回>.mp4`。`-web` は上げない**（YouTube 側で再圧縮されるので
+   二重圧縮になる。あれは Releases で直接配るためのもの）。
+   字幕は `out/<回>.srt` に書かれる。**絵には焼き込み済みなので映像には要らないが、
+   SRT を付けると YouTube の中で検索に乗り、自動翻訳も効く**（焼き込みの文字は
+   画像なので1文字も引っかからない）。視聴者が字幕を ON にすると二重に出るので、
+   上げるかは選ぶ。
+
+8. **動画にする**
 
    ```
    python tools/build.py all          全話 + 通し（立ち絵なし）
@@ -168,7 +182,7 @@ gallery/        公開用のポスターとプレビュー。別リポジトリ�
    python tools/build.py all --chara  立ち絵を入れる
    ```
 
-8. **公開用に軽くする**（ファイルそのものを配るとき）
+9. **公開用に軽くする**（ファイルそのものを配るとき）
 
    ```
    python tools/build.py --ep episodes/00N-... compact          H.264 / 約半分
