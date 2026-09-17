@@ -159,7 +159,16 @@ gallery/        公開用のポスターとプレビュー。別リポジトリ�
    python tools/build.py --ep episodes/00N-... check
    ```
 
-7. **YouTube に上げる材料を出す**（公開するとき）
+7. **動画にする**
+
+   ```
+   python tools/build.py all          全話 + 通し（立ち絵なし）
+   python tools/build.py 2 3          一部だけ作り直す
+   python tools/build.py remux        音声だけ差し替える（絵が変わっていないとき）
+   python tools/build.py all --chara  立ち絵を入れる
+   ```
+
+8. **YouTube に上げる材料を出す**（公開するとき）
 
    ```
    python tools/gallery.py youtube --ep episodes/00N-...
@@ -172,15 +181,6 @@ gallery/        公開用のポスターとプレビュー。別リポジトリ�
    SRT を付けると YouTube の中で検索に乗り、自動翻訳も効く**（焼き込みの文字は
    画像なので1文字も引っかからない）。視聴者が字幕を ON にすると二重に出るので、
    上げるかは選ぶ。
-
-8. **動画にする**
-
-   ```
-   python tools/build.py all          全話 + 通し（立ち絵なし）
-   python tools/build.py 2 3          一部だけ作り直す
-   python tools/build.py remux        音声だけ差し替える（絵が変わっていないとき）
-   python tools/build.py all --chara  立ち絵を入れる
-   ```
 
 9. **公開用に軽くする**（ファイルそのものを配るとき）
 
