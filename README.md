@@ -56,6 +56,8 @@ python tools/new.py 006 isahaya-ikiriki "諫早市 多良見町伊木力"
 ## つくり
 
 ```
+LICENSE                      コードと文書は MIT。素材は元のライセンス
+
 docs/
   format.md                  番組フォーマット（話者・口調・話数・映像方針・表記規約）
   episode-files.md           回のファイルの書式（episode.json / script.md / shots.py）
@@ -77,6 +79,8 @@ tools/
   psd.py        PSDTool 形式の PSD から立ち絵の PNG を書き出す
   clip.py       地図のカメラワーク・写真・字幕・タイトル・立ち絵を描く
   build.py      ショットを連結して音声を乗せる
+  gallery.py    ポスターとプレビューを書き出し、本編を Releases に上げる
+  heritage.py   近代化産業遺産の PDF を読む（途中。先頭のメモ参照）
 
 assets/
   bgm/          BGM。回をまたいで共有する
@@ -87,10 +91,14 @@ episodes/00N-.../
   research.md   調査メモ（年表・碑・座標・出典）
   script.md     読み上げシナリオ（カット指示・ふりがな・クレジット）
   shots.py      ショットの構図定義
+  voice.json    語りの調整値（ブラウザUI が書き出す。無くてもよい）
   photos.json   写真の作者・ライセンス・出典 URL
   photos/       写真そのもの
   chara/        立ち絵を置く場所（中身は配らない。README.md 参照）
   out/          音声・動画・タイムライン（生成物。git には入れない）
+
+gallery/        公開用のポスターとプレビュー。別リポジトリ（git には入れない）
+                https://github.com/lancard-aikawa/kokogallery
 ```
 
 ## 作る手順
@@ -101,7 +109,14 @@ episodes/00N-.../
    "%LOCALAPPDATA%\Programs\VOICEVOX\vv-engine\run.exe" --host 127.0.0.1 --port 50021
    ```
 
-2. **調べて `research.md` と `script.md` を書く**（Claude との会話で）
+2. **回を作って、調べて `research.md` と `script.md` を書く**
+
+   ```
+   python tools/new.py 006 isahaya-ikiriki "諫早市 多良見町伊木力"
+   ```
+
+   雛形ができる（上の「新しい回を作る」）。調査と台本は Claude との会話で。
+   書式は `docs/episode-files.md`。
 
 3. **配役が引けるか見る**（環境を移したときだけ）
 
@@ -247,7 +262,8 @@ script.md 側で「日本のかた」と書く。放送の表記でもかな書�
 readings.json の `type` で語ごとに切り替える。
 
 **碑を扱う回は、まず地理院の自然災害伝承碑データを見る。**
-全国 2,469 基が **碑文つき・座標つき** で 1 ファイルにまとまっている。
+全国684市区町村 2,469 基（2026-08-27 時点）が **碑文つき・座標つき** で
+1 ファイルにまとまっている。**基数は増えるので数を引くときは本家を見ること。**
 `curl -sL -o x.zip https://www.gsi.go.jp/common/000250768.zip`
 
 **構文が通っても動くとは限らない。**
