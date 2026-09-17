@@ -50,6 +50,7 @@ import clip
 # この版が扱えるショットの要素。ここに無いものが入っていたら clip.py に落とす。
 SUPPORTED_KEYS = {
     "t0", "t1", "zoom", "camera", "layers", "notes", "labels", "type", "photo", "kb",
+    "title", "question", "credits",
 }
 
 
@@ -58,6 +59,15 @@ def supported(shot):
     extra = set(shot.keys()) - SUPPORTED_KEYS
     if extra:
         return False, "未対応の要素: %s" % ", ".join(sorted(extra))
+    q = shot.get("question")
+    if q and q.get("think"):
+        # 札のフェード（0.45秒）の外に考える時間があるなら、バーの色を
+        # フェードと掛け合わせる必要がある。drawbox の色は式を取れないので、
+        # その組み合わせだけ PIL に落とす。いまの回はすべて内側に収まっている。
+        a, b = q["from"], q["to"]
+        th = q["think"]
+        if not (a + 0.45 <= th[0] and th[1] <= b - 0.45):
+            return False, "考える時間が札のフェードに掛かっている"
     if shot.get("type") == "photo":
         return True, ""
     for ly in shot.get("layers", []):
@@ -196,6 +206,102 @@ def draw_note_layer(text, size):
     return img
 
 
+def draw_title_layer(ti, size):
+    """タイトル。フェードは ffmpeg 側で掛けるので、ここは開ききった状態。"""
+    W, H = size
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img, "RGBA")
+    d.rectangle([0, 0, W, H], fill=(0, 0, 0, ti.get("dim", 130)))
+    f_main = clip.font(ti.get("size", 96))
+    f_sub = clip.font(ti.get("subsize", 40))
+    cy = int(H * ti.get("y", 0.42))
+    clip.draw_text(d, (W // 2, cy), ti["main"], f_main, (255, 255, 255, 255),
+                   anchor="mm", hw=4)
+    if ti.get("sub"):
+        tw = max(d.textlength(ti["main"], font=f_main),
+                 d.textlength(ti["sub"], font=f_sub)) + 40
+        y = cy + ti.get("size", 96) // 2 + 26
+        d.line([W // 2 - tw / 2, y, W // 2 + tw / 2, y], fill=(255, 255, 255, 200), width=2)
+        clip.draw_text(d, (W // 2, y + 34), ti["sub"], f_sub, (255, 255, 255, 255),
+                       anchor="mm", hw=3)
+    return img
+
+
+def draw_credits_layer(cr, size):
+    """エンディングのクレジット。"""
+    W, H = size
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img, "RGBA")
+    d.rectangle([0, 0, W, H], fill=(0, 0, 0, cr.get("dim", 165)))
+    f_h, f_b = clip.font(30), clip.font(25, bold=False)
+    x, y = int(W * 0.17), int(H * 0.17)
+    for kind, text in cr["lines"]:
+        if kind == "h":
+            y += 16
+            clip.draw_text(d, (x, y), text, f_h, (255, 255, 255, 255), hw=3)
+            y += 42
+        elif kind == "gap":
+            y += 18
+        else:
+            clip.draw_text(d, (x + 26, y), text, f_b, (232, 232, 228, 255), hw=2)
+            y += 34
+    return img
+
+
+def question_box(q, size):
+    """クエスチョンの札の位置。clip.draw_question と同じ計算。"""
+    W, H = size
+    lines = q["text"] if isinstance(q["text"], list) else [q["text"]]
+    f_q = clip.font(q.get("size", 60))
+    lh = q.get("size", 60) + 22
+    box_h = 150 + lh * len(lines)
+    probe = ImageDraw.Draw(Image.new("RGBA", (8, 8)))
+    box_w = int(max([probe.textlength(x, font=f_q) for x in lines]) + 140)
+    box_w = max(box_w, 640)
+    x0 = (W - box_w) // 2
+    y0 = int(H * q.get("y", 0.30))
+    return lines, f_q, lh, box_w, box_h, x0, y0
+
+
+def draw_question_layer(q, size, with_bar_bg):
+    """クエスチョンの札。バーの「残り」は drawbox で描くので、ここには入れない。
+
+    バーの下地（薄い白）は考える時間のあいだだけ出るので、別の絵にする。
+    """
+    W, H = size
+    lines, f_q, lh, box_w, box_h, x0, y0 = question_box(q, size)
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img, "RGBA")
+    if with_bar_bg:
+        bx0, bx1 = x0 + 40, x0 + box_w - 40
+        by = y0 + box_h - 36
+        d.rectangle([bx0, by, bx1, by + 8], fill=(255, 255, 255, 46))
+        return img
+    d.rectangle([0, 0, W, H], fill=(0, 0, 0, q.get("dim", 96)))
+    d.rectangle([x0, y0, x0 + box_w, y0 + box_h], fill=(12, 14, 20, 228))
+    d.rectangle([x0, y0, x0 + box_w, y0 + box_h], outline=(214, 176, 66, 255), width=3)
+    d.rectangle([x0, y0, x0 + box_w, y0 + 62], fill=(214, 176, 66, 240))
+    clip.draw_text(d, (x0 + box_w // 2, y0 + 31), q.get("tag", "クエスチョン"),
+                   clip.font(34), (16, 18, 24, 255), anchor="mm", hw=0)
+    for i, ln in enumerate(lines):
+        clip.draw_text(d, (x0 + box_w // 2, y0 + 96 + lh // 2 + lh * i), ln, f_q,
+                       (255, 255, 255, 255), anchor="mm", hw=3)
+    return img
+
+
+def crop_to_ink(img):
+    """透明でない範囲だけに切り詰めて、(切った絵, 左上の位置) を返す。
+
+    重ねる絵を全画面のまま渡すと、overlay がフレームごとに 1920x1080 を
+    何枚も舐めることになる。字幕は下の帯だけ、注記は左上の箱だけなので、
+    そこだけ渡せば重ね合わせの量が桁で減る。
+    """
+    bb = img.getbbox()
+    if not bb:
+        return None, (0, 0)
+    return img.crop(bb), (bb[0], bb[1])
+
+
 def _fmt(x):
     return ("%.6f" % x).rstrip("0").rstrip(".") or "0"
 
@@ -223,6 +329,11 @@ def render_shot(shot, timeline, out_path, size=(1920, 1080), fps=30, quiet=True,
         state["idx"] += 1
         return state["idx"] - 1
 
+    ti = shot.get("title")
+    # clip.title_active と同じ。タイトルが出ている間はラベルと注記を伏せる。
+    hide = ("" if not ti else
+            "*not(between(t,%s,%s))" % (_fmt(ti["from"] - t0 - 0.5),
+                                        _fmt(ti["to"] - t0 + 0.5)))
     cred = None
     if is_photo:
         last = _bg_photo(shot, photos, size, fps, tmp, add_input, chains)
@@ -241,8 +352,8 @@ def render_shot(shot, timeline, out_path, size=(1920, 1080), fps=30, quiet=True,
             chains.append("[%d:v]format=rgba,fade=t=in:st=%s:d=0.6:alpha=1[B%d]"
                           % (i, _fmt(a - t0), j))
             chains.append("[%s][B%d]overlay=x='(%s)+(%.1f)':y='(%s)+(%.1f)':"
-                          "format=auto:eval=frame:enable='gte(t,%s)'[b%d]"
-                          % (last, j, sx, off[0], sy, off[1], _fmt(a - t0), j))
+                          "format=auto:eval=frame:enable='gte(t,%s)%s'[b%d]"
+                          % (last, j, sx, off[0], sy, off[1], _fmt(a - t0), hide, j))
             last = "b%d" % j
 
     # --- 注記 -------------------------------------------------------------
@@ -250,26 +361,34 @@ def render_shot(shot, timeline, out_path, size=(1920, 1080), fps=30, quiet=True,
         a, b = max(nt["from"], t0), min(nt["to"], t1)
         if b - a <= 1.0 / 60:
             continue
+        img, at = crop_to_ink(draw_note_layer(nt["text"], size))
+        if img is None:
+            continue
         q = os.path.join(tmp, "note%d.png" % j)
-        draw_note_layer(nt["text"], size).save(q)
+        img.save(q)
         i = add_input(q)
         fd = min(0.4, (b - a) / 2.0)
         chains.append("[%d:v]format=rgba,fade=t=in:st=%s:d=%s:alpha=1,"
                       "fade=t=out:st=%s:d=%s:alpha=1[N%d]"
                       % (i, _fmt(a - t0), _fmt(fd), _fmt(b - t0 - fd), _fmt(fd), j))
-        chains.append("[%s][N%d]overlay=format=auto:enable='between(t,%s,%s)'[n%d]"
-                      % (last, j, _fmt(a - t0), _fmt(b - t0), j))
+        chains.append("[%s][N%d]overlay=x=%d:y=%d:format=auto:"
+                      "enable='between(t,%s,%s)%s'[n%d]"
+                      % (last, j, at[0], at[1], _fmt(a - t0), _fmt(b - t0), hide, j))
         last = "n%d" % j
 
     # --- 字幕（写真ショットでは出典を同じ絵に入れる）------------------------
     spans = subtitle_spans(timeline, t0, t1)
     for j, sp in enumerate(spans):
         a, b, row = sp
+        img, at = crop_to_ink(draw_subtitle_layer(row, size, cred))
+        if img is None:
+            continue
         q = os.path.join(tmp, "sub%d.png" % j)
-        draw_subtitle_layer(row, size, cred).save(q)
+        img.save(q)
         i = add_input(q)
-        chains.append("[%s][%d:v]overlay=format=auto:enable='between(t,%s,%s)'[s%d]"
-                      % (last, i, _fmt(a - t0), _fmt(b - t0), j))
+        chains.append("[%s][%d:v]overlay=x=%d:y=%d:format=auto:"
+                      "enable='between(t,%s,%s)'[s%d]"
+                      % (last, i, at[0], at[1], _fmt(a - t0), _fmt(b - t0), j))
         last = "s%d" % j
 
     if is_photo:
@@ -296,11 +415,84 @@ def render_shot(shot, timeline, out_path, size=(1920, 1080), fps=30, quiet=True,
             last = "out"
     else:
         # 地図は右上に地理院の出典。写真ショットには出さない（clip.py と同じ）
+        img, at = crop_to_ink(draw_attrib_layer(size))
         q = os.path.join(tmp, "attrib.png")
-        draw_attrib_layer(size).save(q)
+        img.save(q)
         i = add_input(q)
-        chains.append("[%s][%d:v]overlay=format=auto[out]" % (last, i))
-        last = "out"
+        chains.append("[%s][%d:v]overlay=x=%d:y=%d:format=auto[A]"
+                      % (last, i, at[0], at[1]))
+        last = "A"
+
+    # --- クエスチョンの札 ---------------------------------------------
+    q = shot.get("question")
+    if q:
+        a, b = max(q["from"], t0), min(q["to"], t1)
+        card = os.path.join(tmp, "q.png")
+        draw_question_layer(q, size, False).save(card)
+        i = add_input(card)
+        chains.append("[%d:v]format=rgba,fade=t=in:st=%s:d=0.45:alpha=1,"
+                      "fade=t=out:st=%s:d=0.45:alpha=1[Q]"
+                      % (i, _fmt(a - t0), _fmt(b - t0 - 0.45)))
+        chains.append("[%s][Q]overlay=format=auto:enable='between(t,%s,%s)'[q]"
+                      % (last, _fmt(a - t0), _fmt(b - t0)))
+        last = "q"
+        th = q.get("think")
+        if th:
+            ta, tb = th[0] - t0, th[1] - t0
+            bg = os.path.join(tmp, "qbar.png")
+            draw_question_layer(q, size, True).save(bg)
+            i = add_input(bg)
+            chains.append("[%s][%d:v]overlay=format=auto:enable='between(t,%s,%s)'[qb]"
+                          % (last, i, _fmt(ta), _fmt(tb)))
+            last = "qb"
+            _l, _f, _lh, box_w, box_h, x0, y0 = question_box(q, size)
+            bx0, bx1 = x0 + 40, x0 + box_w - 40
+            by = y0 + box_h - 36
+            # **drawbox の式の t は時刻ではなく線の太さ。**ここに時刻を書くと
+            # 幅がでたらめになり、バーが画面外まで伸びる（実際に踏んだ）。
+            # 幅は sendcmd で毎フレーム流す。
+            cmds, prev = [], None
+            for f in range(n):
+                tt = f / float(fps)
+                if tt < ta or tt > tb:
+                    continue
+                wpx = int(round((bx1 - bx0) * (1.0 - (tt - ta) / max(0.001, tb - ta))))
+                if prev is None or wpx != prev:
+                    cmds.append("%s drawbox w %d;" % (_fmt(tt), wpx))
+                    prev = wpx
+            cf = os.path.join(tmp, "qbar.txt")
+            io.open(cf, "w", encoding="utf-8").write(chr(10).join(cmds) + chr(10))
+            chains.append("[%s]sendcmd=f=%s,drawbox=x=%d:y=%d:w=%d:h=8:"
+                          "color=0xD6B042@0.941:t=fill:enable='between(t,%s,%s)'[qf]"
+                          % (last, rel(cf), bx0, by, bx1 - bx0, _fmt(ta), _fmt(tb)))
+            last = "qf"
+
+    # --- タイトル -------------------------------------------------------
+    if ti:
+        a, b = ti["from"] - t0, ti["to"] - t0
+        p2 = os.path.join(tmp, "title.png")
+        draw_title_layer(ti, size).save(p2)
+        i = add_input(p2)
+        chains.append("[%d:v]format=rgba,fade=t=in:st=%s:d=0.7:alpha=1,"
+                      "fade=t=out:st=%s:d=0.7:alpha=1[T]"
+                      % (i, _fmt(a), _fmt(b - 0.7)))
+        chains.append("[%s][T]overlay=format=auto:enable='between(t,%s,%s)'[ti]"
+                      % (last, _fmt(a), _fmt(b)))
+        last = "ti"
+
+    # --- クレジット ------------------------------------------------------
+    cr = shot.get("credits")
+    if cr:
+        a, b = cr["from"] - t0, cr["to"] - t0
+        p2 = os.path.join(tmp, "credits.png")
+        draw_credits_layer(cr, size).save(p2)
+        i = add_input(p2)
+        chains.append("[%d:v]format=rgba,fade=t=in:st=%s:d=0.8:alpha=1,"
+                      "fade=t=out:st=%s:d=0.8:alpha=1[C]"
+                      % (i, _fmt(a), _fmt(b - 0.8)))
+        chains.append("[%s][C]overlay=format=auto:enable='between(t,%s,%s)'[cr]"
+                      % (last, _fmt(a), _fmt(b)))
+        last = "cr"
 
     if last != "out":
         chains.append("[%s]null[out]" % last)
