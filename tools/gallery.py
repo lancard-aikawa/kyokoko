@@ -73,6 +73,7 @@ def poster(ep_dir, out_dir):
     src = os.path.join(ep_dir, "out", "ep0.mp4")
     if not os.path.exists(src):
         print("  アバンがありません: %s" % src)
+        print("  先に本編を作ってください:  python tools/build.py --ep %s all" % ep_dir)
         return None
     sh, t = title_moment(ep_dir)
     # ep0.mp4 は話の先頭が 0 秒。ショットの t0/t1 も話の中の秒なので、そのまま使う
@@ -303,7 +304,9 @@ def index(ms):
     html(ms, REPO)
 
 
-REPO = "lancard-aikawa/kokogallery"
+# 公開先。fork した人は自分のリポジトリを指す必要があるので、環境変数で上書きできる。
+#   KOKO_REPO=you/your-gallery python tools/gallery.py release
+REPO = os.environ.get("KOKO_REPO", "lancard-aikawa/kokogallery")
 
 # 配るのは H.264。H.265 は同じ見た目で半分になるが、Windows は標準で
 # デコーダを持っておらず（有料の拡張が要る）、入っている機種と無い機種が
@@ -313,11 +316,24 @@ DIST_SUFFIX = "-web"
 NL = chr(10)
 
 
-def release(ep_dir, repo=REPO):
+def release(ep_dir, repo=None):
     """本編を Releases に添付する。タグは回のフォルダ名。
 
     gallery/README.md の「本編をダウンロード」がこのタグを指している。
+
+    公開先が自分のものか先に確かめる。既定値のまま fork した人が実行すると、
+    300MB を投げ終わってから 403 で落ちることになるため。
     """
+    repo = repo or REPO
+    me = subprocess.run(["gh", "api", "user", "--jq", ".login"],
+                        capture_output=True, text=True).stdout.strip()
+    owner = repo.split("/")[0]
+    if me and me != owner:
+        print("公開先 %s は %s のものです（いまの認証は %s）。" % (repo, owner, me))
+        print("自分のリポジトリを指してください:")
+        print("  KOKO_REPO=%s/<repo名> python tools/gallery.py release" % me)
+        return False
+    print("公開先: %s" % repo)
     name = os.path.basename(ep_dir)
     asset = os.path.join(ep_dir, "out", "%s%s.mp4" % (name, DIST_SUFFIX))
     if not os.path.exists(asset):

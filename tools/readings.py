@@ -78,9 +78,20 @@ def apply_words(verbose=True):
 RUBY_RE = re.compile(r"([一-鿿゠-ヿ々〆ヶ・ー]+)《([^《》^]+)(?:\^(\d+))?》")
 
 
+def need_script(ep_dir):
+    """script.md が無いときに、生の traceback ではなく手順を出して落ちる。"""
+    p = os.path.join(ep_dir, "script.md")
+    if not os.path.exists(p):
+        print("script.md がありません: %s" % p)
+        print("回の雛形を作るには:  python tools/new.py <番号> <slug> <町名>")
+        print("書式は docs/episode-files.md にあります。")
+        sys.exit(1)
+    return p
+
+
 def script_lines(ep_dir):
     """実際に読み上げる文字列（碑《ひ》 は ひ に展開したもの）を返す。"""
-    p = os.path.join(ep_dir, "script.md")
+    p = need_script(ep_dir)
     out = []
     for raw in io.open(p, encoding="utf-8"):
         m = LINE_RE.match(raw.strip())
@@ -229,7 +240,7 @@ def check(ep_dir):
     誤読の疑いが1つでもあれば終了コード1で落とす。合成の前に気づくため。
     """
     import re as _re
-    p = os.path.join(ep_dir, "script.md")
+    p = need_script(ep_dir)
     rows = []
     for raw in io.open(p, encoding="utf-8"):
         m = _re.match(r"^(\S+)｜(.+)$", raw.strip())

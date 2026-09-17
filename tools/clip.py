@@ -14,8 +14,65 @@ from PIL import Image, ImageDraw, ImageFont
 
 import tiles
 
-FONT_B = "C:/Windows/Fonts/BIZ-UDGothicB.ttc"
-FONT_R = "C:/Windows/Fonts/BIZ-UDGothicR.ttc"
+# 日本語フォント。**環境ごとに場所が違うので探す。**
+# もとは C:/Windows/Fonts/BIZ-UDGothic*.ttc を直書きしていたが、それだと
+# Windows 以外では import した瞬間に落ち、Windows でも BIZ UD が入っていない
+# 機種で落ちた。候補を順に当たり、見つからなければ名指しで案内する。
+# 明示したいときは環境変数で: KOKO_FONT（太字・標準の両方）/
+# KOKO_FONT_BOLD / KOKO_FONT_REGULAR。
+FONT_CANDIDATES = {
+    "bold": [
+        "C:/Windows/Fonts/BIZ-UDGothicB.ttc",       # Windows 10 1809 以降
+        "C:/Windows/Fonts/YuGothB.ttc",             # 游ゴシック Bold
+        "C:/Windows/Fonts/meiryob.ttc",             # メイリオ Bold
+        "/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc",   # macOS
+        "/System/Library/Fonts/Hiragino Sans GB.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+        "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",
+    ],
+    "regular": [
+        "C:/Windows/Fonts/BIZ-UDGothicR.ttc",
+        "C:/Windows/Fonts/YuGothR.ttc",
+        "C:/Windows/Fonts/meiryo.ttc",
+        "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
+        "/System/Library/Fonts/Hiragino Sans GB.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf",
+    ],
+}
+
+_FONT_PATH = {}
+_FONT_CACHE = {}
+
+
+def font_path(bold=True):
+    """使う日本語フォントのパス。見つからなければ案内して落とす。"""
+    kind = "bold" if bold else "regular"
+    if kind in _FONT_PATH:
+        return _FONT_PATH[kind]
+    named = "KOKO_FONT_BOLD" if bold else "KOKO_FONT_REGULAR"
+    env = os.environ.get(named) or os.environ.get("KOKO_FONT")
+    for cand in ([env] if env else []) + FONT_CANDIDATES[kind]:
+        if cand and os.path.exists(cand):
+            _FONT_PATH[kind] = cand
+            return cand
+    NL = chr(10)
+    raise RuntimeError(NL.join(
+        ["日本語フォントが見つかりません（%s）。" % kind,
+         "  探した場所:"]
+        + ["    " + c for c in FONT_CANDIDATES[kind]]
+        + ["  環境変数で指定できます:",
+           "    KOKO_FONT=<太字にも標準にも使うフォントのパス>",
+           "    KOKO_FONT_BOLD / KOKO_FONT_REGULAR（別々に指定するとき）"]))
+
+
+def font(size, bold=True):
+    """サイズごとに ImageFont を作って使い回す。"""
+    key = (size, bold)
+    if key not in _FONT_CACHE:
+        _FONT_CACHE[key] = ImageFont.truetype(font_path(bold), size)
+    return _FONT_CACHE[key]
+
 
 ATTRIB = "出典: 国土地理院（地理院タイル）"
 
@@ -236,8 +293,8 @@ def draw_title(frame, d, shot, t, W, H):
     if fade <= 0.01:
         return
     d.rectangle([0, 0, W, H], fill=(0, 0, 0, int(ti.get("dim", 130) * fade)))
-    f_main = ImageFont.truetype(FONT_B, ti.get("size", 96))
-    f_sub = ImageFont.truetype(FONT_B, ti.get("subsize", 40))
+    f_main = font(ti.get("size", 96))
+    f_sub = font(ti.get("subsize", 40))
     cy = int(H * ti.get("y", 0.42))
     draw_text(d, (W // 2, cy), ti["main"], f_main,
               (255, 255, 255, int(255 * fade)), anchor="mm", hw=4, fade=fade)
@@ -269,8 +326,8 @@ def draw_question(frame, d, shot, t, W, H):
     d.rectangle([0, 0, W, H], fill=(0, 0, 0, int(q.get("dim", 96) * fade)))
 
     lines = q["text"] if isinstance(q["text"], list) else [q["text"]]
-    f_q = ImageFont.truetype(FONT_B, q.get("size", 60))
-    f_tag = ImageFont.truetype(FONT_B, 34)
+    f_q = font(q.get("size", 60))
+    f_tag = font(34)
     lh = q.get("size", 60) + 22
     box_h = 150 + lh * len(lines)
     box_w = int(max([d.textlength(x, font=f_q) for x in lines]) + 140)
@@ -309,8 +366,8 @@ def draw_credits(frame, d, shot, t, W, H):
     if fade <= 0.01:
         return
     d.rectangle([0, 0, W, H], fill=(0, 0, 0, int(cr.get("dim", 165) * fade)))
-    f_h = ImageFont.truetype(FONT_B, 30)
-    f_b = ImageFont.truetype(FONT_R, 25)
+    f_h = font(30)
+    f_b = font(25, bold=False)
     x, y = int(W * 0.17), int(H * 0.17)
     for kind, text in cr["lines"]:
         if kind == "h":
@@ -349,10 +406,10 @@ def render_photo_shot(shot, timeline, photos, out_path, size=(1920, 1080), fps=3
     meta = photos[shot["photo"]]
     src = Image.open(os.path.join(photos["_dir"], os.path.basename(meta["path"]))).convert("RGB")
 
-    f_sub = ImageFont.truetype(FONT_B, 42)
-    f_name = ImageFont.truetype(FONT_B, 26)
-    f_note = ImageFont.truetype(FONT_B, 38)
-    f_small = ImageFont.truetype(FONT_R, 20)
+    f_sub = font(42)
+    f_name = font(26)
+    f_note = font(38)
+    f_small = font(20, bold=False)
 
     # 画面いっぱいに使えるよう、足りない側に合わせて拡大しておく。
     # 余裕はショットがいちばん寄るところから決める。ここを定数にしておくと、
@@ -422,11 +479,11 @@ def render_shot(shot, timeline, out_path, size=(1920, 1080), fps=30, quiet=True,
     masters = [(ly, Master(ly["id"], zoom, bounds, int(W * smax), int(H * smax)))
                for ly in shot["layers"]]
 
-    f_sub = ImageFont.truetype(FONT_B, 42)
-    f_name = ImageFont.truetype(FONT_B, 26)
-    f_label = ImageFont.truetype(FONT_B, 34)
-    f_note = ImageFont.truetype(FONT_B, 38)
-    f_small = ImageFont.truetype(FONT_R, 20)
+    f_sub = font(42)
+    f_name = font(26)
+    f_label = font(34)
+    f_note = font(38)
+    f_small = font(20, bold=False)
 
     cmd = ["ffmpeg", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
            "-s", "%dx%d" % (W, H), "-r", str(fps), "-i", "-",

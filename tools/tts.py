@@ -313,6 +313,11 @@ def run(ep_dir, quiet=False):
     GAP_CUT = tm.get("gap_cut", GAP_CUT)
 
     script = os.path.join(ep_dir, "script.md")
+    if not os.path.exists(script):
+        print("script.md がありません: %s" % script)
+        print("回の雛形を作るには:  python tools/new.py <番号> <slug> <町名>")
+        print("書式は docs/episode-files.md にあります。")
+        sys.exit(1)
     out = os.path.join(ep_dir, "out")
     lines_dir = os.path.join(out, "lines")
     os.makedirs(lines_dir, exist_ok=True)

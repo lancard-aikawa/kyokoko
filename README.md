@@ -15,16 +15,56 @@
 - 第004回 諫早「出口のない水」　＝地形／クエスチョン
 - 第005回 諫早 伊木力「石の下のガラス玉」 10分19秒　＝史跡／クエスチョン
 
+## 要るもの
+
+| | |
+|---|---|
+| **Python 3** + Pillow | フレームを描く |
+| **VOICEVOX** | 読み上げ。エンジンを `127.0.0.1:50021` で起動しておく |
+| **ffmpeg / ffprobe** | PATH に置く |
+| **日本語フォント** | BIZ UDゴシック → 游ゴシック → メイリオ → Noto Sans CJK → ヒラギノ の順に探す。見つからなければ `KOKO_FONT` で指定する |
+| **gh** | 公開するときだけ（Releases への添付） |
+
+環境変数で差し替えられるもの。**どれも既定値で動くので、ふつうは要らない。**
+
+| | |
+|---|---|
+| `KOKO_FONT` | 日本語フォントのパス（太字・標準の両方に使う） |
+| `KOKO_FONT_BOLD` / `KOKO_FONT_REGULAR` | 別々に指定するとき |
+| `KOKO_REPO` | 公開先。**fork したら自分のリポジトリを指す**（既定は `lancard-aikawa/kokogallery`）。他人のリポジトリに投げようとすると `gallery.py release` が先に止める |
+
+## 新しい回を作る
+
+```
+python tools/new.py 006 isahaya-ikiriki "諫早市 多良見町伊木力"
+```
+
+`episodes/006-isahaya-ikiriki/` に `episode.json` / `script.md` / `shots.py` /
+`photos.json` の雛形ができる。町の中心は国土地理院の住所検索から入る
+（引けないときは `--center 32.7476,129.8686`）。
+
+**雛形はそのまま通る。**作った直後に合成とビルドを走らせると 40 秒ほどの
+動画ができるので、まず一周させて環境が揃っているか確かめられる。
+そのあと中身を自分の町の話に差し替える。
+
+**自分の第一話から始めたいとき**は、`episodes/` の既存の回を消してから
+`python tools/new.py 001 <slug> "<町名>"` と打つ。番号は打った値がそのまま
+使われるので、設定ファイルは無い。
+
+各ファイルの書式は **`docs/episode-files.md`**。
+
 ## つくり
 
 ```
 docs/
   format.md                  番組フォーマット（話者・口調・話数・映像方針・表記規約）
+  episode-files.md           回のファイルの書式（episode.json / script.md / shots.py）
   sources.md                 素材ソースと出典表記・権利の可否
   voicevox-characters.md     全43キャラの「音声」の企業利用可否
   character-art-license.md   「立ち絵」の企業利用可否（音声とは別物。こちらは厳しい）
 
 tools/
+  new.py        新しい回の雛形を作る（そのままビルドできる状態で書き出す）
   tiles.py      地理院タイルの取得（キャッシュつき）
   photos.py     Wikimedia Commons から写真を取得。ライセンスごと記録する
   readings.py   読みの補正・巻き添えの検出・アクセント句の確認・漢字語の総ざらい

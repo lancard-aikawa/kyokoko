@@ -50,11 +50,22 @@ def use_episode(path):
 
 
 def all_lines():
-    return json.load(io.open(os.path.join(OUT, "timeline.json"), encoding="utf-8"))
+    p = os.path.join(OUT, "timeline.json")
+    if not os.path.exists(p):
+        print("out/timeline.json がありません: %s" % p)
+        print("先に音声を合成してください:  python tools/tts.py %s" % EP_DIR)
+        sys.exit(1)
+    return json.load(io.open(p, encoding="utf-8"))
 
 
 def load_shots():
-    spec = importlib.util.spec_from_file_location("shots", os.path.join(EP_DIR, "shots.py"))
+    p = os.path.join(EP_DIR, "shots.py")
+    if not os.path.exists(p):
+        print("shots.py がありません: %s" % p)
+        print("回の雛形を作るには:  python tools/new.py <番号> <slug> <町名>")
+        print("書式は docs/episode-files.md にあります。")
+        sys.exit(1)
+    spec = importlib.util.spec_from_file_location("shots", p)
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
     # 時刻は台詞番号から引くので、録り直すたびに自動で追従する
