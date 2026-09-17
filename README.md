@@ -324,6 +324,21 @@ CRF 19 の出力はもともとその範囲に入っている。compact はフ�
 ほぼ確実に許諾が要る。だから立ち絵は既定では出さない。
 詳しくは `docs/character-art-license.md`。
 
+## ライセンス
+
+コードと文書は **MIT**（`LICENSE`）。同梱の素材はそれぞれ元のライセンスに従う。
+
+| | |
+|---|---|
+| `episodes/*/photos/` | Wikimedia Commons。CC0 / PD / CC BY / Attribution。作者と出典は各回の `photos.json` |
+| `assets/bgm/` | Wikimedia Commons。CC0。作者と出典は `assets/bgm.json` |
+| 地図・空中写真 | 国土地理院（地理院タイル）。出典表示が必要 |
+| 音声 | VOICEVOX。**キャラごとに規約が違う。**使うキャラは個別に確認する（`docs/voicevox-characters.md`） |
+| 立ち絵 | リポジトリに含めていない（二次配布禁止。`docs/character-art-license.md`） |
+
+**生成される動画には素材の規約がそのまま乗る。**とくに VOICEVOX は
+クレジット表記が必須で、キャラによっては利用範囲に条件がある。
+
 ## 出典表示
 
 動画には焼き込み済み。概要欄に貼る分は `script.md` の末尾にある。
