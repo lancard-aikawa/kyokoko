@@ -9,11 +9,24 @@
 - テーマ — 石碑 / 土木 / 地形 / 史跡。町を指定すると、素材の有無で作れるものが決まる
 - 形式 — 対話 / クエスチョン
 
-- 第001回 長崎市大黒町「海だった駅前」 9分53秒　＝石碑
-- 第002回 長崎市 眼鏡橋「流されないための橋」 7分04秒　＝石碑
-- 第003回 佐世保市 針尾送信所「つき固めた百年」 8分23秒　＝土木／クエスチョン
-- 第004回 諫早「出口のない水」 8分14秒　＝地形／クエスチョン
-- 第005回 諫早 伊木力「石の下のガラス玉」 10分19秒　＝史跡／クエスチョン
+## 本編
+
+**▶ [ギャラリー](https://lancard-aikawa.github.io/kokogallery/)** — ポスターと
+アバン（冒頭）のプレビューがその場で見られます。
+本編の動画は各回の **[Releases](https://github.com/lancard-aikawa/kokogallery/releases)**
+から（1920x1080 / H.264 / MP4）。
+
+| 回 | 町 | 題 | 尺 | テーマ／形式 |
+|---|---|---|---|---|
+| [001](https://github.com/lancard-aikawa/kokogallery/releases/tag/001-nagasaki-daikokumachi) | 長崎市大黒町 | 海だった駅前 | 9分53秒 | 石碑 |
+| [002](https://github.com/lancard-aikawa/kokogallery/releases/tag/002-nagasaki-meganebashi) | 長崎市 眼鏡橋 | 流されないための橋 | 7分04秒 | 石碑 |
+| [003](https://github.com/lancard-aikawa/kokogallery/releases/tag/003-sasebo-hario) | 佐世保市 針尾送信所 | つき固めた百年 | 8分23秒 | 土木／クエスチョン |
+| [004](https://github.com/lancard-aikawa/kokogallery/releases/tag/004-isahaya-wan) | 諫早市 諫早湾 | 出口のない水 | 8分14秒 | 地形／クエスチョン |
+| [005](https://github.com/lancard-aikawa/kokogallery/releases/tag/005-isahaya-ikiriki) | 諫早市 伊木力 | 石の下のガラス玉 | 10分19秒 | 史跡／クエスチョン |
+
+ギャラリーは別リポジトリ（[kokogallery](https://github.com/lancard-aikawa/kokogallery)）。
+**動画そのものを git に入れない**ため、ポスターとプレビューだけを置いて、
+本編は Releases に添付している。書き出しと公開は `tools/gallery.py`。
 
 ## 要るもの
 
@@ -99,8 +112,8 @@ episodes/00N-.../
   chara/        立ち絵を置く場所（中身は配らない。README.md 参照）
   out/          音声・動画・タイムライン（生成物。git には入れない）
 
-gallery/        公開用のポスターとプレビュー。別リポジトリ（git には入れない）
-                https://github.com/lancard-aikawa/kokogallery
+gallery/        公開用のポスターとプレビュー。別リポジトリを clone して置く
+                （git には入れない）https://github.com/lancard-aikawa/kokogallery
 ```
 
 ## 作る手順

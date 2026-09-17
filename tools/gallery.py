@@ -208,6 +208,10 @@ PAGE_FOOT = """<footer>
 <li>音声 — VOICEVOX:春日部つむぎ / VOICEVOX:雀松朱司(CV:狐狗狸ラク)</li>
 <li>写真 — Wikimedia Commons（作者とライセンスは各回の photos.json）</li>
 </ul>
+<h3>制作環境</h3>
+<ul>
+<li>調査メモ・台本・構図・ツールは <a href="https://github.com/@@SRC@@">@@SRC@@</a>（MIT）</li>
+</ul>
 </footer>
 </div>
 """
@@ -238,6 +242,7 @@ def html(ms, repo=None):
     if repo:
         rel = "https://github.com/" + repo + "/releases/tag/%s"
     out = [PAGE_HEAD]
+    foot = PAGE_FOOT.replace("@@SRC@@", SOURCE_REPO)
     for m in ms:
         mm, ss = int(m["duration"] // 60), int(m["duration"] % 60)
         d = m["dir"]
@@ -255,7 +260,7 @@ def html(ms, repo=None):
         out.append('<a class="dl" href="%s">本編をダウンロード'
                    '<small>1920x1080 / H.264 / MP4</small></a>\n</article>\n'
                    % (rel % d))
-    out.append(PAGE_FOOT)
+    out.append(foot)
     pth = os.path.join(GALLERY, "index.html")
     io.open(pth, "w", encoding="utf-8").write("".join(out))
     # Jekyll に触らせない。index.html をそのまま出したいだけなので
@@ -275,6 +280,9 @@ def index(ms):
          "ここに入っているのはポスターと、アバン（掴み）のプレビューだけです。",
          "動画そのものを git に入れると、録り直すたびにリポジトリが本編1本分",
          "太っていくためです。",
+         "",
+         "調査メモ・台本・構図・ツールは **[%s](https://github.com/%s)**（MIT）にあります。"
+         % (SOURCE_REPO, SOURCE_REPO),
          ""]
     for m in ms:
         mm, ss = int(m["duration"] // 60), int(m["duration"] % 60)
@@ -307,6 +315,10 @@ def index(ms):
 # 公開先。fork した人は自分のリポジトリを指す必要があるので、環境変数で上書きできる。
 #   KOKO_REPO=you/your-gallery python tools/gallery.py release
 REPO = os.environ.get("KOKO_REPO", "lancard-aikawa/kokogallery")
+
+# 制作環境（このリポジトリ）。ギャラリーから戻るリンクに使う。
+# ギャラリーだけ見た人がソースへ辿れないので、両方向に張る。
+SOURCE_REPO = os.environ.get("KOKO_SOURCE_REPO", "lancard-aikawa/kyokoko")
 
 # 配るのは H.264。H.265 は同じ見た目で半分になるが、Windows は標準で
 # デコーダを持っておらず（有料の拡張が要る）、入っている機種と無い機種が
