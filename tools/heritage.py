@@ -69,7 +69,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CACHE = os.path.join(ROOT, ".cache")
 OUT = os.path.join(ROOT, "assets", "heritage.json")
-UA = "MachiBura/1.0 (https://github.com/lancard-aikawa/machibura-gallery)"
+UA = "kokogallery/1.0 (https://github.com/lancard-aikawa/kokogallery)"
 
 PDFS = {
     "isangun": ("近代化産業遺産群 33", 2007),

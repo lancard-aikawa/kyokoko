@@ -14,7 +14,7 @@ from PIL import Image
 
 BASE = "https://cyberjapandata.gsi.go.jp/xyz/{layer}/{z}/{x}/{y}.{ext}"
 CACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".cache", "tiles")
-UA = "MachiBura/0.1 (personal video production; contact via local use)"
+UA = "kokogallery/0.1 (personal video production; contact via local use)"
 
 # レイヤ定義: id -> (拡張子, 使えるズーム範囲, 表示名)
 LAYERS = {

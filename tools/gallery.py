@@ -303,7 +303,7 @@ def index(ms):
     html(ms, REPO)
 
 
-REPO = "lancard-aikawa/machibura-gallery"
+REPO = "lancard-aikawa/kokogallery"
 
 # 配るのは H.264。H.265 は同じ見た目で半分になるが、Windows は標準で
 # デコーダを持っておらず（有料の拡張が要る）、入っている機種と無い機種が

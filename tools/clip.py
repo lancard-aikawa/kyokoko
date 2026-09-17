@@ -526,7 +526,7 @@ def build_episode(shots, timeline, audio, out_path, size=(1920, 1080), fps=30, e
     photos = load_photos(ep_dir) if ep_dir else None
     chara = load_chara(ep_dir) if (ep_dir and use_chara) else {}
     env = voice_envelope(audio, fps) if chara else ()
-    tmp = tempfile.mkdtemp(prefix="machibura_")
+    tmp = tempfile.mkdtemp(prefix="kokogallery_")
     segs = []
     for i, sh in enumerate(shots):
         seg = os.path.join(tmp, "seg%02d.mp4" % i)

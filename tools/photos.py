@@ -22,7 +22,7 @@ import urllib.request
 sys.stdout.reconfigure(encoding="utf-8")
 
 API = "https://commons.wikimedia.org/w/api.php"
-UA = "MachiBura/0.1 (personal video project; local use)"
+UA = "kokogallery/0.1 (personal video project; local use)"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # 対象の回。--ep <dir> で切り替える。指定が無ければ episodes/ の最初の回。
