@@ -41,12 +41,80 @@ def load_plan(ep_dir):
     return {}
 
 
+_CATALOG = None
+
+
+def speaker_catalog():
+    """エンジンの /speakers から「キャラ名 / スタイル名」-> 話者番号 の表を作る。
+
+    引けなければ None。エンジンが起きていないときや古いときに落とさないため。
+    """
+    global _CATALOG
+    if _CATALOG is not None:
+        return _CATALOG or None
+    try:
+        with urllib.request.urlopen(ENGINE + "/speakers", timeout=20) as r:
+            d = json.loads(r.read().decode("utf-8"))
+    except Exception:
+        _CATALOG = {}
+        return None
+    cat = {}
+    for sp in d:
+        for st in sp.get("styles") or []:
+            cat[(sp["name"], st["name"])] = st["id"]
+            cat.setdefault((sp["name"], None), st["id"])   # スタイル省略時の既定
+    _CATALOG = cat
+    return cat
+
+
+def resolve_speaker(label, fallback, who=""):
+    """label（「春日部つむぎ / ノーマル」）から話者番号を引く。
+
+    **番号ではなく名前を正とする。**VOICEVOX の話者番号はエンジンの版で
+    変わりうるので、episode.json に書いた番号を信じると、他の環境で別の
+    キャラが喋る。引けたものが違っていたら言って、引けたほうを使う。
+    エンジンに訊けないときと label が無いときは、書いてある番号のまま。
+    """
+    if not label:
+        return fallback
+    cat = speaker_catalog()
+    if not cat:
+        return fallback
+    parts = [x.strip() for x in str(label).split("/")]
+    name = parts[0]
+    style = parts[1] if len(parts) > 1 and parts[1] else None
+    def warn(msg):
+        sys.stderr.write(msg + chr(10))
+
+    got = cat.get((name, style))
+    if got is None and style is not None:
+        got = cat.get((name, None))
+        if got is not None:
+            warn("%s: スタイル「%s」が見つかりません。%s の既定スタイル（%d）を使います"
+                 % (who or name, style, name, got))
+    if got is None:
+        warn("%s: 「%s」がエンジンに見つかりません。episode.json の speaker=%s を使います"
+             % (who or name, label, fallback))
+        return fallback
+    if fallback is not None and got != fallback:
+        warn("%s: 話者番号が動いています。episode.json は %s ですが、"
+             "「%s」はいま %d です。%d で合成します"
+             % (who or name, fallback, label, got, got))
+    return got
+
+
 def cast_of(plan):
-    """話者名 -> 合成の既定値。episode.json の cast から作る。"""
+    """話者名 -> 合成の既定値。episode.json の cast から作る。
+
+    speaker は label から引き直す（resolve_speaker）。番号を直書きしたままだと、
+    エンジンの版が違う環境で別のキャラが喋るため。
+    """
     out = {}
     for who, c in (plan.get("cast") or {}).items():
         out[who] = {k: c[k] for k in
                     ("speaker", "speedScale", "intonationScale", "pitchScale") if k in c}
+        if c.get("label"):
+            out[who]["speaker"] = resolve_speaker(c["label"], c.get("speaker"), who)
     return out
 
 # 前後の余白と行間の無音（秒）。episode.json の timing で上書きできる。
@@ -380,8 +448,45 @@ def run(ep_dir, quiet=False):
     return timeline
 
 
+def show_speakers(ep_dir=None):
+    """エンジンが持っている話者と、その回の配役が引けるかを出す。
+
+    別の環境で動かすときに、番号ではなく名前で当たっているか確かめるため。
+    """
+    cat = speaker_catalog()
+    if not cat:
+        print("エンジンに繋がりません: %s" % ENGINE)
+        print("VOICEVOX を起動してください。")
+        return 1
+    if ep_dir:
+        plan = load_plan(ep_dir)
+        cast = (plan.get("cast") or {})
+        if not cast:
+            print("episode.json に cast がありません: %s" % ep_dir)
+            return 1
+        print("この回の配役")
+        for who, c in cast.items():
+            got = resolve_speaker(c.get("label"), c.get("speaker"), who)
+            mark = "" if got == c.get("speaker") else "  ← episode.json は %s" % c.get("speaker")
+            print("  %-6s %-28s speaker=%s%s" % (who, c.get("label") or "(label なし)", got, mark))
+        print("")
+    print("エンジンが持っている話者（%d スタイル）" % len([k for k in cat if k[1]]))
+    seen = []
+    for (name, style), i in sorted(cat.items(), key=lambda kv: kv[1]):
+        if style is None or name in seen:
+            continue
+        seen.append(name)
+        styles = sorted([(v, k[1]) for k, v in cat.items() if k[0] == name and k[1]])
+        print("  %-16s %s" % (name, " / ".join("%s=%d" % (n, v) for v, n in styles)))
+    return 0
+
+
 if __name__ == "__main__":
+    argv = sys.argv[1:]
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    d = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
+    if "--speakers" in argv:
+        argv.remove("--speakers")
+        sys.exit(show_speakers(argv[0] if argv else None))
+    d = argv[0] if argv else os.path.join(
         root, "episodes", "001-nagasaki-daikokumachi")
     run(d)

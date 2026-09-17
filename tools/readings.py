@@ -39,7 +39,28 @@ def req(path, params=None, method="GET", data=b""):
     return body
 
 
-def kana(text, speaker=52):
+_SPK = []
+
+
+def any_speaker():
+    """読みを見るだけなので話者は誰でもよい。ただし番号は版で変わる。
+
+    52（雀松朱司）を直書きしていたが、その番号を持たないエンジンでは
+    /audio_query が 422 で落ちる。居れば 52、居なければ先頭の話者を使う。
+    """
+    if _SPK:
+        return _SPK[0]
+    try:
+        d = json.loads(req("/speakers"))
+        ids = [st["id"] for sp in d for st in (sp.get("styles") or [])]
+    except Exception:
+        ids = []
+    _SPK.append(52 if (52 in ids or not ids) else ids[0])
+    return _SPK[0]
+
+
+def kana(text, speaker=None):
+    speaker = any_speaker() if speaker is None else speaker
     return json.loads(req("/audio_query", {"text": text, "speaker": speaker},
                           "POST"))["kana"]
 

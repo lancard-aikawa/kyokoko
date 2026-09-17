@@ -103,7 +103,13 @@ episodes/00N-.../
 
 2. **調べて `research.md` と `script.md` を書く**（Claude との会話で）
 
-3. **読みを確かめる**
+3. **配役が引けるか見る**（環境を移したときだけ）
+
+   ```
+   python tools/tts.py --speakers episodes/00N-...   配役とエンジンの話者一覧
+   ```
+
+4. **読みを確かめる**
 
    ```
    python tools/readings.py check <ep> 合成の前に機械で止める（誤読があれば落ちる）
@@ -111,19 +117,19 @@ episodes/00N-.../
    python tools/readings.py phrases "<台詞>"   アクセント句と核の位置
    ```
 
-4. **合成**
+5. **合成**
 
    ```
    python tools/tts.py episodes/00N-...
    ```
 
-5. **構図を確かめる**
+6. **構図を確かめる**
 
    ```
    python tools/build.py --ep episodes/00N-... check
    ```
 
-6. **動画にする**
+7. **動画にする**
 
    ```
    python tools/build.py all          全話 + 通し（立ち絵なし）
@@ -132,7 +138,7 @@ episodes/00N-.../
    python tools/build.py all --chara  立ち絵を入れる
    ```
 
-7. **公開用に軽くする**（ファイルそのものを配るとき）
+8. **公開用に軽くする**（ファイルそのものを配るとき）
 
    ```
    python tools/build.py --ep episodes/00N-... compact          H.264 / 約半分
@@ -218,6 +224,12 @@ BGM と読み辞書は番組のもので、回ごとではない（`assets/bgm/`
 書いて同じ誤読を出した。どちらの読みも正しい語なので辞書では直せず、書く側が
 気をつけるしかない。**気をつけるのは無理なので機械で止める。**
 `python tools/readings.py check <ep_dir>` を合成の前に通す。
+
+**VOICEVOX の話者番号は、エンジンの版で変わりうる。**
+`episode.json` に `speaker: 8` と直書きすると、別の環境で**別のキャラが喋る**。
+いまは `label`（「春日部つむぎ / ノーマル」）を正として、合成のたびに
+`/speakers` から番号を引き直す。食い違っていたら警告を出して、引けたほうを使う。
+`python tools/tts.py --speakers <ep_dir>` で確かめられる。
 
 **探訪役の返しが1種類に偏るとオウム返しに聞こえる。**
 「直前の台詞から語を借りて体言止め」が第001・002回で8件ずつあった。

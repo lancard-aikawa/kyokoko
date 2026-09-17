@@ -60,13 +60,20 @@ python tools/build.py --ep <ep_dir> all      本編
 
 | キー | |
 |---|---|
-| `speaker` | VOICEVOX の話者番号。**エンジンのバージョンで変わりうる**ので、別の環境で使うときは `label` と合っているか確かめる |
-| `label` | 「春日部つむぎ / ノーマル」のような人が読む名前 |
+| `label` | 「春日部つむぎ / ノーマル」。**合成時はこれを正とする。**`tts.py` がエンジンの `/speakers` から番号を引き直す |
+| `speaker` | VOICEVOX の話者番号。**エンジンの版で変わりうる**ので保険あつかい。`label` が引けたらそちらが勝ち、食い違っていたら警告が出る。`label` が無いときと、エンジンに繋がらないときだけこの番号が使われる |
 | `role` / `tone` | 役と口調。書くときの指針で、合成には効かない |
 | `color` | 字幕の話者名の色 `[R, G, B]` |
 | `side` | 立ち絵を出す側（`left` / `right`） |
 | `speedScale` / `intonationScale` / `pitchScale` | VOICEVOX にそのまま渡す |
 | `credit` | 概要欄に出すクレジット |
+
+配役がいまのエンジンで引けるかは、これで見られる。
+
+```
+python tools/tts.py --speakers <ep_dir>   その回の配役＋エンジンの話者一覧
+python tools/tts.py --speakers            話者一覧だけ
+```
 
 **`timing`**（秒）
 
