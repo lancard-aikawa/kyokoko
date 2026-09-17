@@ -580,6 +580,60 @@ def load_photos(ep_dir):
 # ffmpeg 版のレンダラ（tools/clip_ff.py）を使うか。build.py が --ff で立てる。
 # 立ち絵を出すときは使わない（口パクが毎フレームの仕事なので ffmpeg に寄せられない）。
 USE_FF = False
+JOBS = 1        # 同時に描くショットの数。build.py の --jobs で決める。
+
+_W = {}         # ワーカが1回だけ仕込む重たいもの（立ち絵・写真・時刻表）
+
+
+def _worker_init(ep_dir, use_chara, use_ff, timeline, env, size, fps):
+    """ワーカを1回だけ仕込む。**重いものはタスクではなくここで渡す。**
+
+    ショットごとに渡すと、ショットの数だけ立ち絵と写真と時刻表を pickle で
+    運ぶことになる。ワーカは数個しか作らないので、ここで一度だけ作る。
+    """
+    global USE_FF, _W
+    USE_FF = use_ff
+    load_plan(ep_dir)
+    chara = load_chara(ep_dir) if (ep_dir and use_chara) else {}
+    ff = None
+    if use_ff and not chara:
+        import clip_ff
+        ff = clip_ff
+    _W = {"ff": ff, "timeline": timeline, "chara": chara, "env": env,
+          "photos": load_photos(ep_dir) if ep_dir else None, "size": size, "fps": fps}
+
+
+def _render_one(task):
+    """ワーカ側。1ショットを描いて (番号, どちらで描いたか, 理由) を返す。"""
+    i, sh, seg = task
+    g = _W
+    ok, why = (g["ff"].supported(sh) if g["ff"] else (False, ""))
+    if ok:
+        g["ff"].render_shot(sh, g["timeline"], seg, g["size"], g["fps"], photos=g["photos"])
+        return i, True, ""
+    if sh.get("type") == "photo":
+        render_photo_shot(sh, g["timeline"], g["photos"], seg, g["size"], g["fps"],
+                          chara=g["chara"], env=g["env"])
+    else:
+        render_shot(sh, g["timeline"], seg, g["size"], g["fps"],
+                    chara=g["chara"], env=g["env"])
+    return i, False, why
+
+
+def auto_jobs():
+    """同時に描く数の既定。
+
+    頭打ちは実測で2倍あたり。絵を作っているのは PIL（Python 側）なので
+    コアを増やせば増えるはずだが、実際には帯域で止まる。コアの半分、
+    最大4までにして、余りは x264 に残す。
+    """
+    try:
+        n = len(os.sched_getaffinity(0))
+    except AttributeError:
+        n = os.cpu_count() or 1
+    return max(1, min(4, n // 2))
+
+
 
 
 def build_episode(shots, timeline, audio, out_path, size=(1920, 1080), fps=30, ep_dir=None,
@@ -593,22 +647,35 @@ def build_episode(shots, timeline, audio, out_path, size=(1920, 1080), fps=30, e
         import clip_ff
         ff = clip_ff
     tmp = tempfile.mkdtemp(prefix="kokogallery_")
-    segs = []
-    for i, sh in enumerate(shots):
-        seg = os.path.join(tmp, "seg%02d.mp4" % i)
-        how = "PIL"
-        ok, why = (ff.supported(sh) if ff else (False, ""))
-        if ok:
-            ff.render_shot(sh, timeline, seg, size, fps, photos=photos)
-            how = "ffmpeg"
-        elif sh.get("type") == "photo":
-            render_photo_shot(sh, timeline, photos, seg, size, fps, chara=chara, env=env)
-        else:
-            render_shot(sh, timeline, seg, size, fps, chara=chara, env=env)
-        segs.append(seg)
-        tail = "" if not ff else ("  [%s]" % how if ok else "  [PIL: %s]" % why)
+    segs = [os.path.join(tmp, "seg%02d.mp4" % i) for i in range(len(shots))]
+    tasks = [(i, sh, segs[i]) for i, sh in enumerate(shots)]
+
+    def report(i, ok, why):
+        sh = shots[i]
+        tail = "" if not USE_FF else ("  [ffmpeg]" if ok else "  [PIL: %s]" % why)
         print("   ショット%d/%d (%.1f-%.1f秒)%s"
               % (i + 1, len(shots), sh["t0"], sh["t1"], tail))
+
+    jobs = max(1, min(JOBS, len(shots)))
+    if jobs > 1:
+        # ショットは互いに関係がないので、そのまま別のプロセスに渡せる。
+        # 順に受けるので、出てくる行はいままでと同じ並びになる。
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(
+                max_workers=jobs, initializer=_worker_init,
+                initargs=(ep_dir, use_chara, USE_FF, timeline, env, size, fps)) as ex:
+            for i, ok, why in ex.map(_render_one, tasks):
+                report(i, ok, why)
+    else:
+        for i, sh, seg in tasks:
+            ok, why = (ff.supported(sh) if ff else (False, ""))
+            if ok:
+                ff.render_shot(sh, timeline, seg, size, fps, photos=photos)
+            elif sh.get("type") == "photo":
+                render_photo_shot(sh, timeline, photos, seg, size, fps, chara=chara, env=env)
+            else:
+                render_shot(sh, timeline, seg, size, fps, chara=chara, env=env)
+            report(i, ok, why)
     lst = os.path.join(tmp, "concat.txt")
     with open(lst, "w", encoding="utf-8") as f:
         for s in segs:

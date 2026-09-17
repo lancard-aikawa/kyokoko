@@ -8,6 +8,8 @@
   python tools/build.py compact      公開用に軽くした複製を作る（--hevc でさらに半分）
 
   --ep <dir> で対象の回を指定する（既定は episodes/ の最初の回）。
+  --jobs N   ショットを N 本ずつ同時に描く（auto でコア数から決める）。
+  --ff       絵を ffmpeg 側で作る（未対応のショットは PIL 版に落ちる）。
 
   既定では立ち絵を出さない。--chara を付けたときだけ入る。
 
@@ -236,6 +238,12 @@ if __name__ == "__main__":
         use_episode(argv[i + 1])
         del argv[i:i + 2]
         print("対象: %s" % EP_DIR)
+    if "--jobs" in argv:
+        i = argv.index("--jobs")
+        v = argv[i + 1]
+        clip.JOBS = clip.auto_jobs() if v == "auto" else int(v)
+        del argv[i:i + 2]
+        print("同時に描く数: %d" % clip.JOBS)
     args = [a for a in argv if a not in ("--chara", "--no-chara", "--hevc", "--ff")]
     USE_CHARA = "--chara" in argv
     if "--ff" in argv:

@@ -96,8 +96,12 @@ def fetch_tile(layer, z, x, y):
         if e.code == 404:  # そのズーム・範囲にタイルが無い
             return Image.new("RGBA", (256, 256), (0, 0, 0, 0))
         raise
-    with open(path, "wb") as f:
+    # **別名で書いてから置き換える。**同じタイルを複数のプロセスが同時に
+    # 取りに行くと、書いている途中のファイルをもう片方が開いて壊れた絵になる。
+    part = "%s.%d.part" % (path, os.getpid())
+    with open(part, "wb") as f:
         f.write(data)
+    os.replace(part, path)
     time.sleep(0.05)  # 相手のサーバに気を遣う
     return Image.open(io.BytesIO(data)).convert("RGBA")
 
