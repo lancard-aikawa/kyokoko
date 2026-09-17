@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""まちぶらの調整用ブラウザUI。
+"""今日はここにの調整用ブラウザUI。
 
   python tools/editor.py [ep_dir]     http://127.0.0.1:8765 を開く
 
@@ -44,7 +44,7 @@ PORT = 8765
 HTML = r"""<!doctype html>
 <html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>まちぶら 調整</title>
+<title>今日はここに 調整</title>
 <style>
 :root{--bg:#f7f7f5;--panel:#fff;--line:#e2e2dd;--ink:#1c1c1a;--dim:#77776f;--accent:#d94f30}
 *{box-sizing:border-box}
@@ -125,7 +125,7 @@ td.txt{font-size:13px;max-width:0;overflow:hidden;text-overflow:ellipsis;white-s
 .row2{display:flex;gap:8px;align-items:center;margin-top:10px}
 </style></head><body>
 <header>
-  <h1>まちぶら</h1>
+  <h1>今日はここに</h1>
   <button class="tab on" data-p="plan">企画</button>
   <button class="tab" data-p="talk">語り</button>
   <button class="tab" data-p="scene">シーンと素材</button>

@@ -208,6 +208,24 @@ def draw_chara(frame, chara, timeline, t, env, fps, W, H):
     frame.paste(img, (x, H - h), img)
 
 
+def title_active(shot, t):
+    """タイトルが出ている時間帯か。ラベルと注記を止めるために使う。
+
+    タイトルは画面の中央に出る。地図のラベルもカメラの中心付近に出るので、
+    同じ瞬間に両方を描くと番組名の上に町名が重なる。第001〜003回の5枚が
+    そうなっていた（「今日はこ眼鏡橋こに」）。ショットを分けて逃げることも
+    できるが、ラベルには終了時刻が無いので毎回ショットを割ることになる。
+    **タイトルが出ている間はラベルと注記を伏せる**ほうが確実で、
+    どの回でも自動的に効く。
+    """
+    ti = shot.get("title")
+    if not ti:
+        return False
+    a, b = ti["from"], ti["to"]
+    # フェードの分だけ内側で切ると、ラベルが消えてからタイトルが出る
+    return a - 0.5 <= t <= b + 0.5
+
+
 def draw_title(frame, d, shot, t, W, H):
     """シーンタイトル。画を暗く落として大きく出す。アバンの番組名にも使う。"""
     ti = shot.get("title")
@@ -368,8 +386,9 @@ def render_photo_shot(shot, timeline, photos, out_path, size=(1920, 1080), fps=3
             frame = frame.resize((W, H), Image.LANCZOS)
         d = ImageDraw.Draw(frame, "RGBA")
 
+        hide = title_active(shot, t)
         for nt in shot.get("notes", []):
-            if not (nt["from"] <= t <= nt["to"]):
+            if hide or not (nt["from"] <= t <= nt["to"]):
                 continue
             fade = min(1.0, (t - nt["from"]) / 0.4, (nt["to"] - t) / 0.4)
             tw = d.textlength(nt["text"], font=f_note)
@@ -452,8 +471,9 @@ def render_shot(shot, timeline, out_path, size=(1920, 1080), fps=30, quiet=True,
             if len(shown) >= 2:
                 d.line(shown, fill=ACCENT + (235,), width=6, joint="curve")
 
+        hide = title_active(shot, t)
         for lb in shot.get("labels", []):
-            if t < lb["from"]:
+            if hide or t < lb["from"]:
                 continue
             fade = min(1.0, (t - lb["from"]) / 0.6)
             x, y = to_screen(m, origin, lb["lat"], lb["lon"])
@@ -468,7 +488,7 @@ def render_shot(shot, timeline, out_path, size=(1920, 1080), fps=30, quiet=True,
                       anchor=lb.get("anchor", "la"), fade=fade)
 
         for nt in shot.get("notes", []):
-            if not (nt["from"] <= t <= nt["to"]):
+            if hide or not (nt["from"] <= t <= nt["to"]):
                 continue
             fade = min(1.0, (t - nt["from"]) / 0.4, (nt["to"] - t) / 0.4)
             tw = d.textlength(nt["text"], font=f_note)

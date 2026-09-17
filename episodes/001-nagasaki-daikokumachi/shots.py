@@ -118,7 +118,7 @@ def build(timeline):
          "camera": [[T(6), 32.7522, 129.8716, 1.0], [TE(8, 5.0), 32.7524, 129.8714, 1.18]],
          "layers": [pale, hill([[T(6), 0.35]])],
          "labels": [lb("大黒町", DAIKOKU, T(6, 0.8))],
-         "title": {"main": "まちぶら", "sub": "第001回　長崎市大黒町 —「海だった駅前」",
+         "title": {"main": "今日はここに", "sub": "第001回　長崎市大黒町 —「海だった駅前」",
                    "from": TE(8, 0.8), "to": TE(8, 4.6), "size": 112, "subsize": 40,
                    "dim": 150, "y": 0.44}},
     ]
@@ -315,7 +315,7 @@ def build(timeline):
                     [TE(110, 9.0), 32.7440, 129.8660, 1.25]],
          "layers": [pale, hill([[0.0, 0.35]])],
          "labels": [lb("大黒町", DAIKOKU, 0.6)],
-         "title": {"main": "まちぶら", "sub": "第001回　長崎市大黒町 —「海だった駅前」",
+         "title": {"main": "今日はここに", "sub": "第001回　長崎市大黒町 —「海だった駅前」",
                    "from": TE(110, 0.6), "to": TE(110, 4.2), "size": 96, "subsize": 36,
                    "dim": 140, "y": 0.40},
          "credits": {"lines": credit_lines(), "from": TE(110, 4.6), "to": TE(110, 8.6),

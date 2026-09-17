@@ -141,7 +141,7 @@ def build_one(ep_dir):
 PAGE_HEAD = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>まちぶら</title>
+<title>今日はここに</title>
 <meta name="description" content="町の碑をめぐる読み上げ動画。地理院タイルと VOICEVOX で作っています。">
 <link rel="icon" href="favicon.svg">
 <style>
@@ -193,7 +193,7 @@ footer a{color:var(--dim)}
 </style>
 <div class="wrap">
 <header>
-<h1>まちぶら</h1>
+<h1>今日はここに</h1>
 <p class="lead">〒や町名を指定すると、その町の遺構・歴史建造物・地名の由来にまつわる
 「碑」の話を集め、読み上げシナリオを作り、地図と VOICEVOX で動画にしています。</p>
 </header>
@@ -265,7 +265,7 @@ def html(ms, repo=None):
 
 def index(ms):
     """gallery/README.md。GitHub の Releases に置いた本編へ誘導する。"""
-    L = ["# まちぶら",
+    L = ["# 今日はここに",
          "",
          "〒や町名を指定すると、その町の遺構・歴史建造物・地名の由来にまつわる",
          "「碑」の話を集め、読み上げシナリオを作り、VOICEVOX と地図で動画にする。",

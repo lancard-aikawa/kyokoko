@@ -101,7 +101,7 @@ def build(timeline):
                     [TE(6, 5.0), 32.7455, 129.8785, 1.4]],
          "layers": [pale, hill([[T(4), 0.4]])],
          "labels": [lb("眼鏡橋", MEGANE, T(4, 0.4))],
-         "title": {"main": "まちぶら", "sub": "第002回　長崎市 眼鏡橋 —「流されないための橋」",
+         "title": {"main": "今日はここに", "sub": "第002回　長崎市 眼鏡橋 —「流されないための橋」",
                    "from": TE(6, 0.8), "to": TE(6, 4.6), "size": 108, "subsize": 38,
                    "dim": 150, "y": 0.44}},
     ]
@@ -245,7 +245,7 @@ def build(timeline):
                     [TE(93, 9.0), 32.7420, 129.8740, 1.3]],
          "layers": [pale, hill([[0.0, 0.35]])],
          "labels": [lb("眼鏡橋", MEGANE, 0.6)],
-         "title": {"main": "まちぶら", "sub": "第002回　長崎市 眼鏡橋 —「流されないための橋」",
+         "title": {"main": "今日はここに", "sub": "第002回　長崎市 眼鏡橋 —「流されないための橋」",
                    "from": TE(93, 0.6), "to": TE(93, 4.2), "size": 96, "subsize": 34,
                    "dim": 140, "y": 0.40},
          "credits": {"lines": credit_lines(), "from": TE(93, 4.6), "to": TE(93, 8.6),
