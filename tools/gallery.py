@@ -163,7 +163,9 @@ h1{
   font-weight:600; text-indent:.22em;
 }
 .lead{margin:20px 0 0; color:var(--dim); font-size:15px; max-width:34em}
-article{padding:52px 0; border-bottom:1px solid var(--line)}
+article{padding:52px 0; border-bottom:1px solid var(--line); scroll-margin-top:24px}
+.anchor{color:inherit; text-decoration:none}
+.anchor:hover{text-decoration:underline}
 h2{margin:0 0 4px; font-size:clamp(19px,4vw,25px); font-weight:600; line-height:1.5}
 .meta{margin:0 0 22px; color:var(--dim); font-size:13px; letter-spacing:.06em}
 video{
@@ -246,15 +248,18 @@ def html(ms, repo=None):
     for m in ms:
         mm, ss = int(m["duration"] // 60), int(m["duration"] % 60)
         d = m["dir"]
+        # 回ごとに id を振る。これが無いと「この回だけを見せる URL」が作れない。
+        # 元リポジトリの README からギャラリーの各回へ深いリンクを張るのに使う。
+        # 見出し自体をその id へのリンクにしておくと、人が URL を拾える。
         out.append(
-            '<article>\n'
-            '<h2>%s</h2>\n'
+            '<article id="%s">\n'
+            '<h2><a class="anchor" href="#%s">%s</a></h2>\n'
             '<p class="meta">%s　%d分%02d秒</p>\n'
             '<video controls preload="none" playsinline poster="%s/poster.jpg">\n'
             '  <source src="%s/preview.mp4" type="video/mp4">\n'
             '</video>\n'
             '<p class="cap">アバン（冒頭）だけの抜粋です。</p>\n'
-            % (esc(m["heading"]), esc(m["town"]), mm, ss, d, d))
+            % (d, d, esc(m["heading"]), esc(m["town"]), mm, ss, d, d))
         out.append("<ol>\n%s\n</ol>\n" %
                    "\n".join("<li>%s</li>" % esc(c) for c in m["chapters"]))
         out.append('<a class="dl" href="%s">本編をダウンロード'
