@@ -236,8 +236,11 @@ if __name__ == "__main__":
         use_episode(argv[i + 1])
         del argv[i:i + 2]
         print("対象: %s" % EP_DIR)
-    args = [a for a in argv if a not in ("--chara", "--no-chara", "--hevc")]
+    args = [a for a in argv if a not in ("--chara", "--no-chara", "--hevc", "--ff")]
     USE_CHARA = "--chara" in argv
+    if "--ff" in argv:
+        clip.USE_FF = True
+        print("レンダラ: ffmpeg 版を優先（未対応のショットは PIL 版に落ちる）")
     print("立ち絵: %s" % ("あり（--chara）" if USE_CHARA else "なし（既定）"))
     arg = args[0] if args else "all"
     if arg == "check":

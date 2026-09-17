@@ -577,22 +577,38 @@ def load_photos(ep_dir):
     return d
 
 
+# ffmpeg 版のレンダラ（tools/clip_ff.py）を使うか。build.py が --ff で立てる。
+# 立ち絵を出すときは使わない（口パクが毎フレームの仕事なので ffmpeg に寄せられない）。
+USE_FF = False
+
+
 def build_episode(shots, timeline, audio, out_path, size=(1920, 1080), fps=30, ep_dir=None,
                   use_chara=True):
     load_plan(ep_dir)
     photos = load_photos(ep_dir) if ep_dir else None
     chara = load_chara(ep_dir) if (ep_dir and use_chara) else {}
     env = voice_envelope(audio, fps) if chara else ()
+    ff = None
+    if USE_FF and not chara:
+        import clip_ff
+        ff = clip_ff
     tmp = tempfile.mkdtemp(prefix="kokogallery_")
     segs = []
     for i, sh in enumerate(shots):
         seg = os.path.join(tmp, "seg%02d.mp4" % i)
-        if sh.get("type") == "photo":
+        how = "PIL"
+        ok, why = (ff.supported(sh) if ff else (False, ""))
+        if ok:
+            ff.render_shot(sh, timeline, seg, size, fps)
+            how = "ffmpeg"
+        elif sh.get("type") == "photo":
             render_photo_shot(sh, timeline, photos, seg, size, fps, chara=chara, env=env)
         else:
             render_shot(sh, timeline, seg, size, fps, chara=chara, env=env)
         segs.append(seg)
-        print("   ショット%d/%d (%.1f-%.1f秒)" % (i + 1, len(shots), sh["t0"], sh["t1"]))
+        tail = "" if not ff else ("  [%s]" % how if ok else "  [PIL: %s]" % why)
+        print("   ショット%d/%d (%.1f-%.1f秒)%s"
+              % (i + 1, len(shots), sh["t0"], sh["t1"], tail))
     lst = os.path.join(tmp, "concat.txt")
     with open(lst, "w", encoding="utf-8") as f:
         for s in segs:
