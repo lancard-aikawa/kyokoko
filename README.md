@@ -57,8 +57,10 @@ python tools/new.py 006 isahaya-ikiriki "諫早市 多良見町伊木力"
 
 ```
 LICENSE                      コードと文書は MIT。素材は元のライセンス
+CLAUDE.md                    Claude Code が自動で読む規則（毎回守ること）
 
 docs/
+  claude.md                  Claude との作り方・分担・実際に間違えた記録
   format.md                  番組フォーマット（話者・口調・話数・映像方針・表記規約）
   episode-files.md           回のファイルの書式（episode.json / script.md / shots.py）
   sources.md                 素材ソースと出典表記・権利の可否
@@ -116,7 +118,7 @@ gallery/        公開用のポスターとプレビュー。別リポジトリ�
    ```
 
    雛形ができる（上の「新しい回を作る」）。調査と台本は Claude との会話で。
-   書式は `docs/episode-files.md`。
+   書式は `docs/episode-files.md`、**Claude との分担と注意は `docs/claude.md`**。
 
 3. **配役が引けるか見る**（環境を移したときだけ）
 
