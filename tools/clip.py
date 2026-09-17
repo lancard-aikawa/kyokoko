@@ -620,6 +620,40 @@ def _render_one(task):
     return i, False, why
 
 
+def _check_one(task):
+    """ワーカ側。ショットの真ん中を1枚の静止画にする。"""
+    i, sh, png = task
+    g = _W
+    mp4 = png.replace(".png", ".tmp.mp4")
+    if sh.get("type") == "photo":
+        render_photo_shot(sh, g["timeline"], g["photos"], mp4, g["size"], g["fps"])
+    else:
+        render_shot(sh, g["timeline"], mp4, g["size"], g["fps"])
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", mp4, "-frames:v", "1", png],
+                   check=True)
+    os.remove(mp4)
+    return i, png
+
+
+def check_shots(shots, timeline, tasks, ep_dir, size=(1920, 1080), fps=30):
+    """構図確認の静止画をまとめて作る。tasks は (番号, ショット, 出力先)。
+
+    build_episode と同じで、JOBS が 1 より大きければ別のプロセスに配る。
+    """
+    jobs = max(1, min(JOBS, len(tasks)))
+    if jobs > 1:
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(
+                max_workers=jobs, initializer=_worker_init,
+                initargs=(ep_dir, False, False, timeline, (), size, fps)) as ex:
+            for i, png in ex.map(_check_one, tasks):
+                yield i, png
+    else:
+        _worker_init(ep_dir, False, False, timeline, (), size, fps)
+        for t in tasks:
+            yield _check_one(t)
+
+
 def auto_jobs():
     """同時に描く数の既定。
 

@@ -83,20 +83,17 @@ def check():
     os.makedirs(d, exist_ok=True)
     for ep, shots in sorted(load_shots().items()):
         tl = timeline(ep)
+        tasks, mids = [], []
         for i, sh in enumerate(shots):
             mid = (sh["t0"] + sh["t1"]) / 2
             one = dict(sh)
+            # 4フレームだけ描いて、その1枚目を取る
             one["t0"], one["t1"] = mid, mid + 4.0 / 30
-            mp4 = os.path.join(d, "ep%d_shot%d.mp4" % (ep, i + 1))
-            if one.get("type") == "photo":
-                clip.render_photo_shot(one, tl, clip.load_photos(EP_DIR), mp4)
-            else:
-                clip.render_shot(one, tl, mp4)
-            png = mp4.replace(".mp4", ".png")
-            subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", mp4, "-frames:v", "1", png],
-                           check=True)
-            os.remove(mp4)
-            print("ep%d shot%d  %5.1f秒地点  -> %s" % (ep, i + 1, mid, os.path.basename(png)))
+            tasks.append((i, one, os.path.join(d, "ep%d_shot%d.png" % (ep, i + 1))))
+            mids.append(mid)
+        for i, png in clip.check_shots(shots, tl, tasks, EP_DIR):
+            print("ep%d shot%d  %5.1f秒地点  -> %s"
+                  % (ep, i + 1, mids[i], os.path.basename(png)))
 
 
 def audio_for(ep, shots):
