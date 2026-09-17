@@ -62,6 +62,13 @@ from PIL import Image, ImageDraw
 import clip
 
 # この版が扱えるショットの要素。ここに無いものが入っていたら clip.py に落とす。
+# ここに無い要素があるショットは clip.py に落ちる。
+#
+# **paths（道を時間で伸ばす線）はわざと入れていない。**線は地図と一緒に動く
+# ので、カメラの前段にマスタと同じ大きさの絵として置く必要がある。伸びる途中
+# の形はフレームごとに違うから、フレームの数だけマスタ大の PNG を書くことに
+# なり、PIL で直接描くより高くつく。いまのところ全100ショット中1件なので、
+# その1件だけ PIL に任せる。
 SUPPORTED_KEYS = {
     "t0", "t1", "zoom", "camera", "layers", "notes", "labels", "type", "photo", "kb",
     "title", "question", "credits",
