@@ -49,7 +49,7 @@ import clip
 
 # この版が扱えるショットの要素。ここに無いものが入っていたら clip.py に落とす。
 SUPPORTED_KEYS = {
-    "t0", "t1", "zoom", "camera", "layers", "notes", "type", "photo", "kb",
+    "t0", "t1", "zoom", "camera", "layers", "notes", "labels", "type", "photo", "kb",
 }
 
 
@@ -59,7 +59,7 @@ def supported(shot):
     if extra:
         return False, "未対応の要素: %s" % ", ".join(sorted(extra))
     if shot.get("type") == "photo":
-        return False, "写真ショットは未対応"
+        return True, ""
     for ly in shot.get("layers", []):
         if ly.get("alpha") and len(ly["alpha"]) > 60:
             return False, "アルファのキーが多すぎる"
@@ -121,7 +121,39 @@ def subtitle_spans(timeline, t0, t1):
     return spans
 
 
-def draw_subtitle_layer(row, size):
+def draw_label_sprite(lb):
+    """ラベル（点＋文字）を1枚の小さな絵にする。
+
+    返すのは (画像, 点の位置からの左上オフセット)。カメラで動くので、
+    毎フレーム描き直す代わりに overlay の x/y を式で動かす。
+    フェードは ffmpeg 側で掛けるので、ここでは開ききった状態で描く。
+    """
+    f = clip.font(34)
+    r = lb.get("r", 9)
+    dx, dy = lb.get("offset", (18, -20))
+    anchor = lb.get("anchor", "la")
+    probe = ImageDraw.Draw(Image.new("RGBA", (8, 8)))
+    tb = probe.textbbox((dx, dy), lb["text"], font=f, anchor=anchor, stroke_width=3)
+    x0 = min(-r - 3, tb[0]) - 2
+    y0 = min(-r - 3, tb[1]) - 2
+    x1 = max(r + 3, tb[2]) + 2
+    y1 = max(r + 3, tb[3]) + 2
+    img = Image.new("RGBA", (int(x1 - x0), int(y1 - y0)), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img, "RGBA")
+    ox, oy = -x0, -y0
+    d.ellipse([ox - r, oy - r, ox + r, oy + r], fill=clip.ACCENT + (235,),
+              outline=(255, 255, 255, 235), width=3)
+    clip.draw_text(d, (ox + dx, oy + dy), lb["text"], f, (255, 255, 255, 255),
+                   anchor=anchor)
+    return img, (x0, y0)
+
+
+def photo_credit(meta):
+    return "写真: %s ／ %s（Wikimedia Commons）" % (meta.get("author") or "不明",
+                                                 meta.get("license") or "?")
+
+
+def draw_subtitle_layer(row, size, cred=None):
     """字幕1行ぶんの透明な全画面。clip.draw_subtitle と同じ描き方。"""
     W, H = size
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -134,6 +166,11 @@ def draw_subtitle_layer(row, size):
     clip.draw_text(d, (70, H - band + 14), row["speaker"], f_name, col + (255,), hw=2)
     for k, ln in enumerate(lines):
         clip.draw_text(d, (70, H - band + 50 + k * 54), ln, f_sub, (255, 255, 255, 255))
+    if cred:
+        # 写真ショットの出典は字幕帯の上。帯の高さが行数で変わるので、
+        # 字幕と同じ絵に描いてしまう（別レイヤにすると位置を追えない）。
+        clip.draw_text(d, (W - 24, H - band - 30), cred, clip.font(20, bold=False),
+                       (255, 255, 255, 235), anchor="ra")
     return img
 
 
@@ -163,113 +200,230 @@ def _fmt(x):
     return ("%.6f" % x).rstrip("0").rstrip(".") or "0"
 
 
-def render_shot(shot, timeline, out_path, size=(1920, 1080), fps=30, quiet=True):
-    """1ショットを書き出す。clip.render_shot と同じ引数・同じ出力。"""
+def render_shot(shot, timeline, out_path, size=(1920, 1080), fps=30, quiet=True,
+                photos=None):
+    """1ショットを書き出す。clip.render_shot / render_photo_shot と同じ出力。"""
     W, H = size
     t0, t1 = shot["t0"], shot["t1"]
     dur = t1 - t0
     n = int(round(dur * fps))
-    bounds = clip.shot_bounds(shot)
-    smax = max([k[3] if len(k) > 3 else 1.0 for k in shot["camera"]])
+    is_photo = shot.get("type") == "photo"
 
     tmp = tempfile.mkdtemp(prefix="kokogallery_ff_", dir=".cache")
-    rel = lambda p: os.path.relpath(p, os.getcwd()).replace("\\", "/")  # noqa: E731
 
-    # --- レイヤのマスターを PNG に出す --------------------------------
-    inputs, chains, alpha_cmds = [], [], []
-    masters = []
-    for k, ly in enumerate(shot["layers"]):
-        m = clip.Master(ly["id"], shot["zoom"], bounds, int(W * smax), int(H * smax))
-        p = os.path.join(tmp, "m%d.png" % k)
-        pad_16x9(m.img).save(p)
-        masters.append((ly, m, p, pad_16x9(m.img).width))
+    def rel(q):
+        return os.path.relpath(q, os.getcwd()).replace(chr(92), "/")
 
-    base = masters[0][1]
-    TV = "(on/%d)" % fps
-    s_e = smooth_expr(shot["camera"], lambda kk: (kk[3] if len(kk) > 3 else 1.0), t0, TV)
-    cx_e = smooth_expr(shot["camera"], lambda kk: base.world(kk[1], kk[2])[0], t0, TV)
-    cy_e = smooth_expr(shot["camera"], lambda kk: base.world(kk[1], kk[2])[1], t0, TV)
+    inputs, chains = [], []
+    state = {"idx": 0}
 
-    # PIL の Master.view は int(round(...)) で切る。zoompan は切り捨てなので、
-    # 式の側を floor(x+0.5) に揃える。揃えないと 1〜2px ずれ、等高線の地図では
-    # それが画素差として大きく出る（実測で平均 6〜8 → 2〜3 に落ちた）。
-    cwr = "floor(%d*(%s)+0.5)" % (W, s_e)
-    chr_ = "floor(%d*(%s)+0.5)" % (H, s_e)
+    def add_input(path):
+        """入力を1本足して、その番号を返す。"""
+        inputs.extend(["-loop", "1", "-framerate", str(fps), "-t", _fmt(dur), "-i", path])
+        state["idx"] += 1
+        return state["idx"] - 1
 
-    def cam_chain(iw):
-        return ("zoompan=z='(%d/(%s))':x='floor((%s)-(%s)/2+0.5)':"
-                "y='floor((%s)-(%s)/2+0.5)':d=1:s=%dx%d:fps=%d,setsar=1"
-                % (iw, cwr, cx_e, cwr, cy_e, chr_, W, H, fps))
+    cred = None
+    if is_photo:
+        last = _bg_photo(shot, photos, size, fps, tmp, add_input, chains)
+        cred = photo_credit(photos[shot["photo"]])
+    else:
+        last, screen = _bg_map(shot, size, fps, tmp, add_input, chains, rel, n, t0)
 
-    for k, (ly, m, p, iw) in enumerate(masters):
-        inputs += ["-loop", "1", "-framerate", str(fps), "-t", _fmt(dur), "-i", p]
-        if k == 0:
-            chains.append("[0:v]%s[bg]" % cam_chain(iw))
-            last = "bg"
-            continue
-        # アルファは毎フレーム clip.interp の値を sendcmd で流す。PIL と完全一致。
-        keys = ly.get("alpha") or [[t0, 1.0]]
-        cmd = []
-        prev = None
-        for i in range(n):
-            t = t0 + i / float(fps)
-            a = clip.interp(keys, t)[0]
-            if prev is None or abs(a - prev) > 0.002:
-                cmd.append("%s colorchannelmixer aa %s;" % (_fmt(i / float(fps)), _fmt(a)))
-                prev = a
-        cf = os.path.join(tmp, "a%d.txt" % k)
-        io.open(cf, "w", encoding="utf-8").write("\n".join(cmd) + "\n")
-        a0 = clip.interp(keys, t0)[0]
-        chains.append("[%d:v]%s,format=rgba,sendcmd=f=%s,colorchannelmixer=aa=%s[L%d]"
-                      % (k, cam_chain(iw), rel(cf), _fmt(a0), k))
-        chains.append("[%s][L%d]overlay=format=auto[c%d]" % (last, k, k))
-        last = "c%d" % k
+        # --- ラベル。カメラで動くので、スプライトを式で運ぶ ----------------
+        for j, lb in enumerate(shot.get("labels", [])):
+            img, off = draw_label_sprite(lb)
+            q = os.path.join(tmp, "lb%d.png" % j)
+            img.save(q)
+            i = add_input(q)
+            a = max(lb["from"], t0)
+            sx, sy = screen(lb["lat"], lb["lon"])
+            chains.append("[%d:v]format=rgba,fade=t=in:st=%s:d=0.6:alpha=1[B%d]"
+                          % (i, _fmt(a - t0), j))
+            chains.append("[%s][B%d]overlay=x='(%s)+(%.1f)':y='(%s)+(%.1f)':"
+                          "format=auto:eval=frame:enable='gte(t,%s)'[b%d]"
+                          % (last, j, sx, off[0], sy, off[1], _fmt(a - t0), j))
+            last = "b%d" % j
 
-    idx = len(masters)
-
-    # --- 注記（タイトル中は伏せる。この版はタイトル未対応なので常に出す）---
+    # --- 注記 -------------------------------------------------------------
     for j, nt in enumerate(shot.get("notes", [])):
         a, b = max(nt["from"], t0), min(nt["to"], t1)
         if b - a <= 1.0 / 60:
             continue
-        p = os.path.join(tmp, "note%d.png" % j)
-        draw_note_layer(nt["text"], size).save(p)
-        inputs += ["-loop", "1", "-framerate", str(fps), "-t", _fmt(dur), "-i", p]
+        q = os.path.join(tmp, "note%d.png" % j)
+        draw_note_layer(nt["text"], size).save(q)
+        i = add_input(q)
         fd = min(0.4, (b - a) / 2.0)
         chains.append("[%d:v]format=rgba,fade=t=in:st=%s:d=%s:alpha=1,"
                       "fade=t=out:st=%s:d=%s:alpha=1[N%d]"
-                      % (idx, _fmt(a - t0), _fmt(fd), _fmt(b - t0 - fd), _fmt(fd), j))
+                      % (i, _fmt(a - t0), _fmt(fd), _fmt(b - t0 - fd), _fmt(fd), j))
         chains.append("[%s][N%d]overlay=format=auto:enable='between(t,%s,%s)'[n%d]"
                       % (last, j, _fmt(a - t0), _fmt(b - t0), j))
         last = "n%d" % j
-        idx += 1
 
-    # --- 字幕 -----------------------------------------------------------
-    for j, (a, b, row) in enumerate(subtitle_spans(timeline, t0, t1)):
-        p = os.path.join(tmp, "sub%d.png" % j)
-        draw_subtitle_layer(row, size).save(p)
-        inputs += ["-loop", "1", "-framerate", str(fps), "-t", _fmt(dur), "-i", p]
+    # --- 字幕（写真ショットでは出典を同じ絵に入れる）------------------------
+    spans = subtitle_spans(timeline, t0, t1)
+    for j, sp in enumerate(spans):
+        a, b, row = sp
+        q = os.path.join(tmp, "sub%d.png" % j)
+        draw_subtitle_layer(row, size, cred).save(q)
+        i = add_input(q)
         chains.append("[%s][%d:v]overlay=format=auto:enable='between(t,%s,%s)'[s%d]"
-                      % (last, idx, _fmt(a - t0), _fmt(b - t0), j))
+                      % (last, i, _fmt(a - t0), _fmt(b - t0), j))
         last = "s%d" % j
-        idx += 1
 
-    # --- 右上の出典 ------------------------------------------------------
-    p = os.path.join(tmp, "attrib.png")
-    draw_attrib_layer(size).save(p)
-    inputs += ["-loop", "1", "-framerate", str(fps), "-t", _fmt(dur), "-i", p]
-    chains.append("[%s][%d:v]overlay=format=auto[out]" % (last, idx))
+    if is_photo:
+        # 字幕が出ていない間の写真クレジット（帯が無いので画面の下端寄り）
+        gaps, prev = [], t0
+        for a, b, _row in spans:
+            if a - prev > 1.0 / 60:
+                gaps.append((prev, a))
+            prev = b
+        if t1 - prev > 1.0 / 60:
+            gaps.append((prev, t1))
+        if gaps:
+            img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            d = ImageDraw.Draw(img, "RGBA")
+            clip.draw_text(d, (W - 24, H - 30), cred, clip.font(20, bold=False),
+                           (255, 255, 255, 235), anchor="ra")
+            q = os.path.join(tmp, "cred.png")
+            img.save(q)
+            i = add_input(q)
+            en = "+".join("between(t,%s,%s)" % (_fmt(a - t0), _fmt(b - t0))
+                          for a, b in gaps)
+            chains.append("[%s][%d:v]overlay=format=auto:enable='%s'[out]"
+                          % (last, i, en))
+            last = "out"
+    else:
+        # 地図は右上に地理院の出典。写真ショットには出さない（clip.py と同じ）
+        q = os.path.join(tmp, "attrib.png")
+        draw_attrib_layer(size).save(q)
+        i = add_input(q)
+        chains.append("[%s][%d:v]overlay=format=auto[out]" % (last, i))
+        last = "out"
+
+    if last != "out":
+        chains.append("[%s]null[out]" % last)
 
     # zoompan の内部スケーリングは swscale。PIL は LANCZOS なので合わせる。
-    # -sws_flags はグローバルに効く（zoompan にフィルタ固有の指定が無いため）。
     cmd = ["ffmpeg", "-v", "error", "-y", "-sws_flags", "lanczos"] + inputs + [
         "-filter_complex", ";".join(chains), "-map", "[out]",
         "-c:v", "libx264", "-preset", "medium", "-crf", "19",
         "-pix_fmt", "yuv420p", "-r", str(fps), "-frames:v", str(n), out_path]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode:
-        raise RuntimeError("ffmpeg が失敗しました:\n%s" % r.stderr[-2000:])
+        raise RuntimeError("ffmpeg が失敗しました:" + chr(10) + r.stderr[-2000:])
     for f in os.listdir(tmp):
         os.remove(os.path.join(tmp, f))
     os.rmdir(tmp)
     return out_path
+
+
+def _bg_map(shot, size, fps, tmp, add_input, chains, rel, n, t0):
+    """地図ショットの下地。返すのは (最後の名札, 画面座標の式を返す関数)。"""
+    W, H = size
+    bounds = clip.shot_bounds(shot)
+    smax = max([k[3] if len(k) > 3 else 1.0 for k in shot["camera"]])
+    masters = []
+    for k, ly in enumerate(shot["layers"]):
+        m = clip.Master(ly["id"], shot["zoom"], bounds, int(W * smax), int(H * smax))
+        img = pad_16x9(m.img)
+        q = os.path.join(tmp, "m%d.png" % k)
+        img.save(q)
+        masters.append((ly, m, q, img.width))
+
+    base = masters[0][1]
+    # zoompan の時刻変数。on/fps でも動くが、長いショットで実測 0.1 秒ほど
+    # ずれた（31秒のズームの終盤で倍率が食い違う）。time は入力フレームの
+    # PTS そのものなので、こちらのほうが PIL の t と素直に一致する。
+    TV = "time"
+    s_e = smooth_expr(shot["camera"], lambda kk: (kk[3] if len(kk) > 3 else 1.0), t0, TV)
+    cx_e = smooth_expr(shot["camera"], lambda kk: base.world(kk[1], kk[2])[0], t0, TV)
+    cy_e = smooth_expr(shot["camera"], lambda kk: base.world(kk[1], kk[2])[1], t0, TV)
+
+    # PIL の Master.view は int(round(...)) で切る。zoompan は切り捨てなので
+    # 式の側を floor(x+0.5) に揃える。揃えないと 1〜2px ずれ、等高線の地図では
+    # それが画素差として大きく出る（実測で平均 6〜8 → 2〜3 に落ちた）。
+    cwr = "floor(%d*(%s)+0.5)" % (W, s_e)
+    chr_ = "floor(%d*(%s)+0.5)" % (H, s_e)
+    xl = "floor((%s)-(%s)/2+0.5)" % (cx_e, cwr)
+    yt = "floor((%s)-(%s)/2+0.5)" % (cy_e, chr_)
+
+    def cam(iw):
+        return ("zoompan=z='(%d/(%s))':x='%s':y='%s':d=1:s=%dx%d:fps=%d,setsar=1"
+                % (iw, cwr, xl, yt, W, H, fps))
+
+    last = None
+    for k, item in enumerate(masters):
+        ly, m, q, iw = item
+        i = add_input(q)
+        if k == 0:
+            chains.append("[%d:v]%s[bg]" % (i, cam(iw)))
+            last = "bg"
+            continue
+        # アルファは毎フレーム clip.interp の値を sendcmd で流す。PIL と完全一致。
+        keys = ly.get("alpha") or [[t0, 1.0]]
+        cmds, prev = [], None
+        for f in range(n):
+            a = clip.interp(keys, t0 + f / float(fps))[0]
+            if prev is None or abs(a - prev) > 0.002:
+                cmds.append("%s colorchannelmixer aa %s;" % (_fmt(f / float(fps)), _fmt(a)))
+                prev = a
+        cf = os.path.join(tmp, "a%d.txt" % k)
+        io.open(cf, "w", encoding="utf-8").write(chr(10).join(cmds) + chr(10))
+        chains.append("[%d:v]%s,format=rgba,sendcmd=f=%s,colorchannelmixer=aa=%s[L%d]"
+                      % (i, cam(iw), rel(cf), _fmt(clip.interp(keys, t0)[0]), k))
+        chains.append("[%s][L%d]overlay=format=auto[c%d]" % (last, k, k))
+        last = "c%d" % k
+
+    def screen(lat, lon):
+        """clip.to_screen と同じ。((world - left)/s, (world - top)/s)。
+
+        **overlay には on が無い**（変数は n と t）。zoompan 用に組んだ式を
+        そのまま渡すと "Error when evaluating the expression" で落ちるので、
+        ここでは時刻変数 t で組み直す。t = n/fps なので値は同じ。
+        """
+        tv = "t"
+        se = smooth_expr(shot["camera"], lambda kk: (kk[3] if len(kk) > 3 else 1.0), t0, tv)
+        cxe = smooth_expr(shot["camera"], lambda kk: base.world(kk[1], kk[2])[0], t0, tv)
+        cye = smooth_expr(shot["camera"], lambda kk: base.world(kk[1], kk[2])[1], t0, tv)
+        cw = "floor(%d*(%s)+0.5)" % (W, se)
+        ch = "floor(%d*(%s)+0.5)" % (H, se)
+        lft = "floor((%s)-(%s)/2+0.5)" % (cxe, cw)
+        top = "floor((%s)-(%s)/2+0.5)" % (cye, ch)
+        wx, wy = base.world(lat, lon)
+        return ("((%.3f-(%s))/(%s))" % (wx, lft, se),
+                "((%.3f-(%s))/(%s))" % (wy, top, se))
+
+    return last, screen
+
+
+def _bg_photo(shot, photos, size, fps, tmp, add_input, chains):
+    """写真ショットの下地。clip.render_photo_shot と同じ寄り引き。"""
+    W, H = size
+    t0, t1 = shot["t0"], shot["t1"]
+    meta = photos[shot["photo"]]
+    src = Image.open(os.path.join(photos["_dir"],
+                                  os.path.basename(meta["path"]))).convert("RGB")
+    kb = shot.get("kb", [[t0, 1.10, 0.5, 0.5], [t1, 1.0, 0.5, 0.5]])
+    zmax = max([float(r[1]) for r in kb if len(r) > 1] or [1.25])
+    k = max(W / float(src.width), H / float(src.height)) * max(zmax, 1.05)
+    base = src.resize((int(src.width * k), int(src.height * k)), Image.LANCZOS)
+    bw, bh = base.width, base.height
+    img = pad_16x9(base, bg=(0, 0, 0))
+    q = os.path.join(tmp, "photo.png")
+    img.save(q)
+    i = add_input(q)
+
+    TV = "time"
+    s_e = smooth_expr(kb, lambda r: r[1], t0, TV)
+    cx_e = smooth_expr(kb, lambda r: r[2], t0, TV)
+    cy_e = smooth_expr(kb, lambda r: r[3], t0, TV)
+    # PIL 側は int() の切り捨て。round ではないので floor で揃える。
+    cw = "floor(%d*(%s))" % (W, s_e)
+    ch = "floor(%d*(%s))" % (H, s_e)
+    x = "max(0,min(floor((%d-(%s))*(%s)),%d-(%s)))" % (bw, cw, cx_e, bw, cw)
+    y = "max(0,min(floor((%d-(%s))*(%s)),%d-(%s)))" % (bh, ch, cy_e, bh, ch)
+    chains.append("[%d:v]zoompan=z='(%d/(%s))':x='%s':y='%s':d=1:s=%dx%d:fps=%d,"
+                  "setsar=1[bg]" % (i, img.width, cw, x, y, W, H, fps))
+    return "bg"

@@ -599,7 +599,7 @@ def build_episode(shots, timeline, audio, out_path, size=(1920, 1080), fps=30, e
         how = "PIL"
         ok, why = (ff.supported(sh) if ff else (False, ""))
         if ok:
-            ff.render_shot(sh, timeline, seg, size, fps)
+            ff.render_shot(sh, timeline, seg, size, fps, photos=photos)
             how = "ffmpeg"
         elif sh.get("type") == "photo":
             render_photo_shot(sh, timeline, photos, seg, size, fps, chara=chara, env=env)
