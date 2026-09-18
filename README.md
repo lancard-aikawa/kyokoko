@@ -25,6 +25,7 @@
 | 003 | 佐世保市 針尾送信所 | [つき固めた百年](https://lancard-aikawa.github.io/kokogallery/#003-sasebo-hario) | 8分23秒 | 土木／クエスチョン | **[YouTube](https://youtu.be/YBlXiOLEogM)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/003-sasebo-hario) |
 | 004 | 諫早市 諫早湾 | [出口のない水](https://lancard-aikawa.github.io/kokogallery/#004-isahaya-wan) | 8分14秒 | 地形／クエスチョン | **[YouTube](https://youtu.be/Og2XCHAjWck)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/004-isahaya-wan) |
 | 005 | 諫早市 伊木力 | [石の下のガラス玉](https://lancard-aikawa.github.io/kokogallery/#005-isahaya-ikiriki) | 10分19秒 | 史跡／クエスチョン | **[YouTube](https://youtu.be/w46CJ8AqcOc)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/005-isahaya-ikiriki) |
+| 006 | 横浜市 神奈川台場 | 陸になった台場 | 9分47秒 | 石碑／クエスチョン | **[YouTube](https://youtu.be/e7nrckVpE8s)** |
 
 ギャラリーは別リポジトリ（[kokogallery](https://github.com/lancard-aikawa/kokogallery)）。
 **動画そのものを git に入れない**ため、ポスターとプレビューだけを置いて、
