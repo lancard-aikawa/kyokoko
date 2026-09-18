@@ -512,6 +512,79 @@ def thumb_candidates(ep_dir, total):
     return outs
 
 
+# 再生リストの説明の頭に置く紹介。ギャラリーの lead と同じことを言う。
+# **ここが番組の説明の正。**別の場所に書き写さない。
+PROGRAM_LEAD = [
+    "〒や町名を手がかりに、その町の碑・遺構・地形を訪ねていく番組です。",
+    "地図は国土地理院の地理院タイル、語りは VOICEVOX。1話 7〜10分。",
+]
+
+# 番組ぜんたいの出典。回ごとの写真は各回の概要欄に書いてある。
+PROGRAM_CREDITS = [
+    "音声: VOICEVOX:春日部つむぎ / VOICEVOX:雀松朱司(CV:狐狗狸ラク)",
+    "地図: 出典 国土地理院（地理院タイル）",
+    "　　　https://maps.gsi.go.jp/development/ichiran.html",
+    "碑文: 出典 国土地理院（自然災害伝承碑）",
+    "写真: Wikimedia Commons（作者とライセンスは各回の概要欄）",
+]
+
+
+def playlist(eps):
+    """再生リストのタイトルと説明を dist/ に書き出す。
+
+    並びは回の番号順。まだ公開していない回は URL が無いので出さない
+    （再生リストに入っていないものを説明だけ並べても迷わせる）。
+    """
+    ms = [meta(e) for e in eps]
+    program = (plan_of(eps[0]).get("program") or "").strip() if eps else ""
+    title = program or "今日はここに"
+
+    body = list(PROGRAM_LEAD)
+    shown = 0
+    for m in ms:
+        if not m["youtube"]:
+            continue
+        shown += 1
+        lead = ""
+        p = plan_of(os.path.join(ROOT, "episodes", m["dir"]))
+        sm = p.get("summary")
+        if isinstance(sm, str):
+            sm = [sm]
+        if sm:
+            lead = sm[0]
+        body += ["",
+                 "第%s回 %s —「%s」  %d分%02d秒"
+                 % (m["no"], m["town"], m["title"],
+                    int(m["duration"] // 60), int(m["duration"] % 60))]
+        if lead:
+            body.append(lead)
+        body.append("https://youtu.be/%s" % m["youtube"])
+    body += [""] + PROGRAM_CREDITS
+    body += ["",
+             "制作環境: https://github.com/%s" % SOURCE_REPO,
+             "ギャラリー: https://lancard-aikawa.github.io/kokogallery/"]
+    desc = NL.join(body)
+
+    tp, dp = layout.playlist_paths(ROOT)
+    layout.program_dist_dir(ROOT, make=True)
+    io.open(tp, "w", encoding="utf-8", newline=NL).write(title + NL)
+    io.open(dp, "w", encoding="utf-8", newline=NL).write(desc + NL)
+    print("  タイトル %s" % os.path.relpath(tp, ROOT))
+    print("           %s" % title)
+    # 再生リストのタイトルは150字、説明は5000字まで
+    if len(title) > 150:
+        print("           ※ %d字。150字を超えている" % len(title))
+    print("  説明     %s  (%d回ぶん / %d字)"
+          % (os.path.relpath(dp, ROOT), shown, len(desc)))
+    if len(desc) > 5000:
+        print("           ※ 5000字を超えている")
+    missing = [m["no"] for m in ms if not m["youtube"]]
+    if missing:
+        print("           ※ 動画IDが無いので載せていない回: %s" % ", ".join(missing))
+        print("             公開したら episode.json の youtube に入れる")
+    return 0
+
+
 def youtube_text(ep_dir):
     """YouTube のタイトルと概要欄を作る。どちらもそのまま貼れる形にする。
 
@@ -628,6 +701,8 @@ if __name__ == "__main__":
         for e in eps:
             rc |= youtube(e) or 0
         sys.exit(rc)
+    elif mode == "playlist":
+        sys.exit(playlist(eps))
     elif mode == "srt":
         for e in eps:
             print(os.path.basename(e))

@@ -43,6 +43,24 @@ def srt_path(ep_dir):
     return os.path.join(dist_dir(ep_dir), "%s.srt" % os.path.basename(ep_dir))
 
 
+def program_dist_dir(root, make=False):
+    """番組ぜんたいの成果物（回にひもづかないもの）。リポジトリ直下の dist/。
+
+    いまのところ再生リストのタイトルと説明だけ。回ごとの dist/ と同じで、
+    作り直せるので追跡しない。
+    """
+    d = os.path.join(root, "dist")
+    if make:
+        os.makedirs(d, exist_ok=True)
+    return d
+
+
+def playlist_paths(root):
+    d = program_dist_dir(root)
+    return (os.path.join(d, "youtube-playlist-title.txt"),
+            os.path.join(d, "youtube-playlist-description.txt"))
+
+
 def youtube_paths(ep_dir):
     """YouTube にそのまま貼る2つ。タイトルと概要欄。"""
     d = dist_dir(ep_dir)

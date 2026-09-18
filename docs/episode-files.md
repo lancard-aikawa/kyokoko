@@ -35,6 +35,7 @@ shots.py を書く（台詞番号は timeline.json に出ている）
 python tools/build.py --ep <ep_dir> check    構図を1枚ずつ確認
 python tools/build.py --ep <ep_dir> all      本編（dist/ に通しができる）
 python tools/gallery.py youtube --ep <ep_dir>   タイトルと概要欄を dist/ に書く
+python tools/gallery.py playlist               再生リストの分をリポジトリ直下の dist/ に
 ```
 
 **`shots.py` は `timeline.json` ができてから書く。**時刻を台詞番号から引くので、

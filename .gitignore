@@ -20,6 +20,10 @@ episodes/*/chara/*
 episodes/*/out/
 episodes/*/dist/
 
+# 番組ぜんたいの成果物（いまは再生リストのタイトルと説明）。
+#   python tools/gallery.py playlist
+/dist/
+
 # 地理院タイルのキャッシュと、規約の写し。取り直せる。
 .cache/
 

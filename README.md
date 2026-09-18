@@ -215,6 +215,15 @@ gallery/        公開用のポスターとプレビュー。別リポジトリ�
    概要欄の頭に置く2〜3行は `episode.json` の `summary` から取る。**1行1文で
    書く**（YouTube は改行をそのまま出すので、文の途中で折ると行が割れて見える）。
 
+   再生リストのタイトルと説明は回にひもづかないので、別に出す。
+
+   ```
+   python tools/gallery.py playlist     -> dist/youtube-playlist-*.txt
+   ```
+
+   公開ずみの回（`episode.json` の `youtube` が入っている回）だけを番号順に
+   並べる。回が増えたら作り直す。
+
    **上げるのは `dist/<回>.mp4`。`-web` は上げない**（YouTube 側で再圧縮されるので
    二重圧縮になる。あれは Releases で直接配るためのもの）。
    字幕は `dist/<回>.srt` に書かれる。**絵には焼き込み済みなので映像には要らないが、
