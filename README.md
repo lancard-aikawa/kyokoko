@@ -19,10 +19,10 @@
 | 回 | 町 | 題 | 尺 | テーマ／形式 | 見る |
 |---|---|---|---|---|---|
 | 001 | 長崎市大黒町 | [海だった駅前](https://lancard-aikawa.github.io/kokogallery/#001-nagasaki-daikokumachi) | 9分53秒 | 石碑 | **[YouTube](https://youtu.be/f7xuXU-avK0)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/001-nagasaki-daikokumachi) |
-| 002 | 長崎市 眼鏡橋 | [流されないための橋](https://lancard-aikawa.github.io/kokogallery/#002-nagasaki-meganebashi) | 7分04秒 | 石碑 | [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/002-nagasaki-meganebashi) |
-| 003 | 佐世保市 針尾送信所 | [つき固めた百年](https://lancard-aikawa.github.io/kokogallery/#003-sasebo-hario) | 8分23秒 | 土木／クエスチョン | [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/003-sasebo-hario) |
-| 004 | 諫早市 諫早湾 | [出口のない水](https://lancard-aikawa.github.io/kokogallery/#004-isahaya-wan) | 8分14秒 | 地形／クエスチョン | [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/004-isahaya-wan) |
-| 005 | 諫早市 伊木力 | [石の下のガラス玉](https://lancard-aikawa.github.io/kokogallery/#005-isahaya-ikiriki) | 10分19秒 | 史跡／クエスチョン | [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/005-isahaya-ikiriki) |
+| 002 | 長崎市 眼鏡橋 | [流されないための橋](https://lancard-aikawa.github.io/kokogallery/#002-nagasaki-meganebashi) | 7分04秒 | 石碑 | **[YouTube](https://youtu.be/4qyxsQsx8-s)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/002-nagasaki-meganebashi) |
+| 003 | 佐世保市 針尾送信所 | [つき固めた百年](https://lancard-aikawa.github.io/kokogallery/#003-sasebo-hario) | 8分23秒 | 土木／クエスチョン | **[YouTube](https://youtu.be/YBlXiOLEogM)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/003-sasebo-hario) |
+| 004 | 諫早市 諫早湾 | [出口のない水](https://lancard-aikawa.github.io/kokogallery/#004-isahaya-wan) | 8分14秒 | 地形／クエスチョン | **[YouTube](https://youtu.be/Og2XCHAjWck)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/004-isahaya-wan) |
+| 005 | 諫早市 伊木力 | [石の下のガラス玉](https://lancard-aikawa.github.io/kokogallery/#005-isahaya-ikiriki) | 10分19秒 | 史跡／クエスチョン | **[YouTube](https://youtu.be/w46CJ8AqcOc)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/005-isahaya-ikiriki) |
 
 ギャラリーは別リポジトリ（[kokogallery](https://github.com/lancard-aikawa/kokogallery)）。
 **動画そのものを git に入れない**ため、ポスターとプレビューだけを置いて、
