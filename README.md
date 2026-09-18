@@ -11,6 +11,8 @@
 
 ## 本編
 
+**▶ [YouTube の再生リスト](https://www.youtube.com/playlist?list=PLdANPudLNm-c)** — 全話を続けて見る。
+
 **▶ [ギャラリー](https://lancard-aikawa.github.io/kokogallery/)** — ポスターと
 アバン（冒頭）のプレビューがその場で見られます。題からその回へ直接飛べます。
 本編の動画は各回の **[Releases](https://github.com/lancard-aikawa/kokogallery/releases)**

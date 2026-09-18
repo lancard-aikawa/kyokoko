@@ -215,6 +215,7 @@ footer a{color:var(--dim)}
 <h1>今日はここに</h1>
 <p class="lead">〒や町名を指定すると、その町の遺構・歴史建造物・地名の由来にまつわる
 「碑」の話を集め、読み上げシナリオを作り、地図と VOICEVOX で動画にしています。</p>
+@@PLAYLIST@@
 </header>
 """
 
@@ -259,7 +260,9 @@ def html(ms, repo=None):
     rel = "../../releases/tag/%s"
     if repo:
         rel = "https://github.com/" + repo + "/releases/tag/%s"
-    out = [PAGE_HEAD]
+    pl = ('<p class="lead">▶ <a href="https://www.youtube.com/playlist?list=%s">'
+          'YouTube の再生リスト</a>（全話）</p>' % PLAYLIST) if PLAYLIST else ""
+    out = [PAGE_HEAD.replace("@@PLAYLIST@@", pl)]
     foot = PAGE_FOOT.replace("@@SRC@@", SOURCE_REPO)
     for m in ms:
         mm, ss = int(m["duration"] // 60), int(m["duration"] % 60)
@@ -348,6 +351,8 @@ REPO = os.environ.get("KOKO_REPO", "lancard-aikawa/kokogallery")
 # 制作環境（このリポジトリ）。ギャラリーから戻るリンクに使う。
 # ギャラリーだけ見た人がソースへ辿れないので、両方向に張る。
 SOURCE_REPO = os.environ.get("KOKO_SOURCE_REPO", "lancard-aikawa/kyokoko")
+# YouTube の再生リスト。空なら概要欄にもギャラリーにも出さない。
+PLAYLIST = os.environ.get("KOKO_PLAYLIST", "PLdANPudLNm-c")
 
 # 配るのは H.264。H.265 は同じ見た目で半分になるが、Windows は標準で
 # デコーダを持っておらず（有料の拡張が要る）、入っている機種と無い機種が
@@ -561,8 +566,8 @@ def playlist(eps):
         body.append("https://youtu.be/%s" % m["youtube"])
     body += [""] + PROGRAM_CREDITS
     body += ["",
-             "制作環境: https://github.com/%s" % SOURCE_REPO,
-             "ギャラリー: https://lancard-aikawa.github.io/kokogallery/"]
+             "ギャラリー: https://lancard-aikawa.github.io/kokogallery/",
+             "制作環境: https://github.com/%s" % SOURCE_REPO]
     desc = NL.join(body)
 
     tp, dp = layout.playlist_paths(ROOT)
@@ -612,10 +617,13 @@ def youtube_text(ep_dir):
     cr = script_credits(ep_dir)
     if cr:
         body += ["", cr]
-    body += ["",
-             "制作環境: https://github.com/%s" % SOURCE_REPO,
-             "ギャラリー: https://lancard-aikawa.github.io/kokogallery/#%s"
-             % os.path.basename(ep_dir)]
+    # 見る人に近いものから並べる。制作環境は最後。
+    body += [""]
+    if PLAYLIST:
+        body.append("再生リスト: https://www.youtube.com/playlist?list=%s" % PLAYLIST)
+    body += ["ギャラリー: https://lancard-aikawa.github.io/kokogallery/#%s"
+             % os.path.basename(ep_dir),
+             "制作環境: https://github.com/%s" % SOURCE_REPO]
     return title, NL.join(body), total
 
 
