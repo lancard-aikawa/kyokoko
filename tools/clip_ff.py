@@ -551,7 +551,10 @@ def _bg_map(shot, size, fps, tmp, add_input, chains, rel, n, t0):
     masters = []
     for k, ly in enumerate(shot["layers"]):
         m = clip.Master(ly["id"], shot["zoom"], bounds, int(W * smax), int(H * smax))
-        img = pad_16x9(m.img)
+        # Master は透明のある層を RGBA で持つようになった（clip.py）。ffmpeg 版は
+        # 層の alpha を colorchannelmixer で掛けるだけなので、これまでどおり RGB で渡す。
+        # 透明を活かした重ね方は PIL 版だけが対応している。
+        img = pad_16x9(m.img.convert("RGB"))
         q = os.path.join(tmp, "m%d.png" % k)
         img.save(q)
         masters.append((ly, m, q, img.width))

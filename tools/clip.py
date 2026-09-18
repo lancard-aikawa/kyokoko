@@ -137,7 +137,12 @@ class Master(object):
                            int(math.ceil(self.H / self.scale)))
         if abs(self.scale - 1.0) > 1e-6:
             img = img.resize((self.W, self.H), Image.LANCZOS)
-        self.img = img.convert("RGB")
+        # 透明を持つ層（swale などの重ねる層、404 で欠けたタイル）は、透明を
+        # 残しておく。RGB に潰すと透明が黒になり、重ねたときに陸が暗く沈む
+        # （第006回の check で、明治期の低湿地を重ねた陸が黒くつぶれた）。
+        img = img.convert("RGBA")
+        self.has_alpha = img.getchannel("A").getextrema()[0] < 255
+        self.img = img if self.has_alpha else img.convert("RGB")
         self.zoom = zoom
         self.px0 = cx * 256 - self.W / 2.0
         self.py0 = cy * 256 - self.H / 2.0
@@ -507,7 +512,14 @@ def render_shot(shot, timeline, out_path, size=(1920, 1080), fps=30, quiet=True,
             if a <= 0.002:
                 continue
             img, org = mm.view(lat, lon, W, H, s)
-            frame = img if frame is None else Image.blend(frame, img, a)
+            if frame is None:
+                frame = img.convert("RGB")
+            elif mm.has_alpha:
+                # タイル自身の透明に、層の alpha を掛けて重ねる
+                mask = img.getchannel("A").point(lambda v, a=a: int(v * a))
+                frame = Image.composite(img.convert("RGB"), frame, mask)
+            else:
+                frame = Image.blend(frame, img, a)
             origin, m = org, mm
         if frame is None:
             frame = Image.new("RGB", (W, H), (24, 24, 24))

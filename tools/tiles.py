@@ -101,7 +101,15 @@ def fetch_tile(layer, z, x, y):
     part = "%s.%d.part" % (path, os.getpid())
     with open(part, "wb") as f:
         f.write(data)
-    os.replace(part, path)
+    try:
+        os.replace(part, path)
+    except PermissionError:
+        # Windows では、別のプロセスが先に同じタイルを置いて開いていると、
+        # 置き換えが「アクセス拒否」で落ちる（第006回の check で実際に落ちた）。
+        # 中身は同じタイルなので、先に置かれたほうを使えばよい。
+        if not os.path.exists(path):
+            raise
+        os.remove(part)
     time.sleep(0.05)  # 相手のサーバに気を遣う
     return Image.open(io.BytesIO(data)).convert("RGBA")
 
