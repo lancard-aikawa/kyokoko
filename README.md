@@ -94,6 +94,7 @@ tools/
   psd.py        PSDTool 形式の PSD から立ち絵の PNG を書き出す
   clip.py       地図のカメラワーク・写真・字幕・タイトル・立ち絵を描く
   clip_ff.py    同じ絵を ffmpeg のフィルタで作る版（--ff。未対応は clip.py に落ちる）
+  layout.py     out/（作業場）と dist/（成果物）の置き場を決める1か所
   build.py      ショットを連結して音声を乗せる
   gallery.py    ポスターとプレビューを書き出し、本編を Releases に上げる
   heritage.py   近代化産業遺産の PDF を読む（途中。先頭のメモ参照）
@@ -111,7 +112,10 @@ episodes/00N-.../
   photos.json   写真の作者・ライセンス・出典 URL
   photos/       写真そのもの
   chara/        立ち絵を置く場所（中身は配らない。README.md 参照）
-  out/          音声・動画・タイムライン（生成物。git には入れない）
+  out/          作業場。話ごとの wav と mp4、タイムライン、構図確認の静止画
+  dist/         最終成果物。**公開するときはここだけ見ればよい**
+                通し / -web / 字幕 / YouTube のタイトルと概要欄 / サムネ候補
+                （out/ も dist/ も生成物。git には入れない）
 
 gallery/        公開用のポスターとプレビュー。別リポジトリを clone して置く
                 （git には入れない）https://github.com/lancard-aikawa/kokogallery
@@ -201,10 +205,19 @@ gallery/        公開用のポスターとプレビュー。別リポジトリ�
    python tools/gallery.py youtube --ep episodes/00N-...
    ```
 
-   タイトル・概要欄（チャプターつき）・上げるファイル・サムネイル・字幕を出す。
-   **上げるのは `out/<回>.mp4`。`-web` は上げない**（YouTube 側で再圧縮されるので
+   `dist/` に、そのまま貼れる形で書き出す。
+
+   ```
+   dist/youtube-title.txt         タイトル
+   dist/youtube-description.txt   概要欄（紹介＋チャプター＋クレジット＋リンク）
+   ```
+
+   概要欄の頭に置く2〜3行は `episode.json` の `summary` から取る。**1行1文で
+   書く**（YouTube は改行をそのまま出すので、文の途中で折ると行が割れて見える）。
+
+   **上げるのは `dist/<回>.mp4`。`-web` は上げない**（YouTube 側で再圧縮されるので
    二重圧縮になる。あれは Releases で直接配るためのもの）。
-   字幕は `out/<回>.srt` に書かれる。**絵には焼き込み済みなので映像には要らないが、
+   字幕は `dist/<回>.srt` に書かれる。**絵には焼き込み済みなので映像には要らないが、
    SRT を付けると YouTube の中で検索に乗り、自動翻訳も効く**（焼き込みの文字は
    画像なので1文字も引っかからない）。視聴者が字幕を ON にすると二重に出るので、
    上げるかは選ぶ。
@@ -216,7 +229,7 @@ gallery/        公開用のポスターとプレビュー。別リポジトリ�
    python tools/build.py --ep episodes/00N-... compact --hevc   H.265 / 約1/3
    ```
 
-   out/ の通しは高画質のまま残り、`-web` / `-hevc` の複製ができる。
+   dist/ の通しは高画質のまま残り、隣に `-web` / `-hevc` の複製ができる。
    **YouTube に上げるだけなら要らない。** 向こうで再圧縮されるので、
    先に削っておくと二重圧縮になるだけ。
 

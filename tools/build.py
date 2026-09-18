@@ -27,6 +27,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import clip
+import layout
 import mix
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -154,7 +155,8 @@ def join(eps):
         for p in made:
             f.write("file '%s'\n" % p.replace("\\", "/"))
     # 通しの名前は回から取る。回ごとに違うので直書きしない。
-    full = os.path.join(OUT, "%s.mp4" % os.path.basename(EP_DIR))
+    layout.dist_dir(EP_DIR, make=True)
+    full = layout.full_mp4(EP_DIR)
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst,
                     "-c", "copy", full], capture_output=True, check=True)
     os.remove(lst)
@@ -162,7 +164,7 @@ def join(eps):
 
 
 def compact(hevc=False, crf=None):
-    """公開用に軽くした複製を作る。out/ の通しは高画質のまま残す。
+    """公開用に軽くした複製を作る。dist/ の通しは高画質のまま残す。
 
     絵は地理院タイルと写真なので、H.264 CRF 19 で描くと 7〜12 Mbps になる。
     細かいのは地図の文字だけで、それは CRF を落としても崩れない
@@ -171,7 +173,7 @@ def compact(hevc=False, crf=None):
     YouTube に上げるだけなら縮めなくてよい。向こうで再圧縮されるので、
     先に削っておくと二重圧縮になるだけ。ファイルそのものを配るときに使う。
     """
-    src = os.path.join(OUT, "%s.mp4" % os.path.basename(EP_DIR))
+    src = layout.full_mp4(EP_DIR)
     if not os.path.exists(src):
         print("通しがありません。先に build してください: %s" % src)
         return False
@@ -183,7 +185,7 @@ def compact(hevc=False, crf=None):
     else:
         v = ["-c:v", "libx264", "-preset", "slow", "-crf", str(crf or 23)]
         suffix = "-web"
-    out = os.path.join(OUT, "%s%s.mp4" % (os.path.basename(EP_DIR), suffix))
+    out = layout.web_mp4(EP_DIR, suffix)
     subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", src] + v +
                    ["-pix_fmt", "yuv420p",
                     # 音声はすでにモノラル 24kHz の 98kbps。触っても減らない

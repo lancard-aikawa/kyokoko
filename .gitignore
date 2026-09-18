@@ -13,7 +13,12 @@ episodes/*/chara/*
 # 音声・動画・タイムライン・確認用の静止画。1GB を超えるので入れない。
 #   python tools/tts.py    で音声とタイムライン
 #   python tools/build.py  で動画
+#
+#   out/  は作業場（話ごとの wav と mp4、タイムライン、構図確認の静止画）
+#   dist/ は最終成果物（通し・配布用・字幕・YouTube のタイトルと概要欄）
+#   どちらも作り直せる。分けている理由は tools/layout.py に書いてある。
 episodes/*/out/
+episodes/*/dist/
 
 # 地理院タイルのキャッシュと、規約の写し。取り直せる。
 .cache/

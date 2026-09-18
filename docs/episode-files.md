@@ -14,7 +14,11 @@
 | `photos.json` | `tools/photos.py` が書く | ○ |
 | `photos/` | `tools/photos.py` が入れる | ○ |
 | `chara/` | 人が置く。**中身は配らない**（二次配布禁止の素材） | × |
-| `out/` | `tts.py` と `build.py` の生成物 | × |
+| `out/` | 作業場。`tts.py` と `build.py` の中間物 | × |
+| `dist/` | 最終成果物。`build.py` と `gallery.py` が書く | × |
+
+`out/` と `dist/` の切り分けは `tools/layout.py` に書いてある。公開するときに
+見るのは `dist/` だけでよい。
 
 ## 作る順番
 
@@ -29,7 +33,8 @@ python tools/readings.py check    <ep_dir>   機械で止める（誤読があ�
 python tools/tts.py <ep_dir>                 合成。out/timeline.json ができる
 shots.py を書く（台詞番号は timeline.json に出ている）
 python tools/build.py --ep <ep_dir> check    構図を1枚ずつ確認
-python tools/build.py --ep <ep_dir> all      本編
+python tools/build.py --ep <ep_dir> all      本編（dist/ に通しができる）
+python tools/gallery.py youtube --ep <ep_dir>   タイトルと概要欄を dist/ に書く
 ```
 
 **`shots.py` は `timeline.json` ができてから書く。**時刻を台詞番号から引くので、

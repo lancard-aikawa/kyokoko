@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.stdout.reconfigure(encoding="utf-8")
 
 import build as B  # noqa: E402
+import layout  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GALLERY = os.path.join(ROOT, "gallery")
@@ -114,7 +115,7 @@ def meta(ep_dir):
     """ギャラリーの1行に要る値を集める。"""
     name = os.path.basename(ep_dir)
     p = plan(ep_dir)
-    full = os.path.join(ep_dir, "out", "%s.mp4" % name)
+    full = layout.full_mp4(ep_dir)
     dur = 0.0
     if os.path.exists(full):
         dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries",
@@ -375,7 +376,7 @@ def release(ep_dir, repo=None):
         return False
     print("公開先: %s" % repo)
     name = os.path.basename(ep_dir)
-    asset = os.path.join(ep_dir, "out", "%s%s.mp4" % (name, DIST_SUFFIX))
+    asset = layout.web_mp4(ep_dir, DIST_SUFFIX)
     if not os.path.exists(asset):
         print("%s: 配布用がありません。先に compact してください" % name)
         print("  python tools/build.py --ep %s compact" % ep_dir)
@@ -447,7 +448,7 @@ def script_credits(ep_dir):
 
 
 def srt(ep_dir):
-    """通しに合わせた字幕ファイルを書く。out/<回>.srt
+    """通しに合わせた字幕ファイルを書く。dist/<回>.srt
 
     字幕は絵に焼き込んであるので、映像としては要らない。要るのは
     **YouTube の中で検索に乗ること**と、自動翻訳が効くこと。焼き込みの
@@ -479,7 +480,8 @@ def srt(ep_dir):
                   "%s --> %s" % (stamp(o + r["start"]), stamp(o + r["end"])),
                   "%s：%s" % (r["speaker"], r["text"]),
                   ""]
-    p = os.path.join(ep_dir, "out", "%s.srt" % os.path.basename(ep_dir))
+    layout.dist_dir(ep_dir, make=True)
+    p = layout.srt_path(ep_dir)
     io.open(p, "w", encoding="utf-8", newline=NL).write(NL.join(lines))
     print("  字幕   %s  (%d行)" % (os.path.relpath(p, ROOT), k))
     return p
@@ -494,10 +496,11 @@ def thumb_candidates(ep_dir, total):
     どれを選ぶかは先に手元で見比べたほうが早い。
     """
     outs = []
-    src = os.path.join(ep_dir, "out", "%s.mp4" % os.path.basename(ep_dir))
+    src = layout.full_mp4(ep_dir)
     for frac in (0.25, 0.50, 0.75):
         t = total * frac
-        o = os.path.join(ep_dir, "out", "thumb-%02d.jpg" % int(frac * 100))
+        o = os.path.join(layout.dist_dir(ep_dir, make=True),
+                         "thumb-%02d.jpg" % int(frac * 100))
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "%.2f" % t, "-i", src,
                         "-frames:v", "1", "-vf", "scale=1280:-2:flags=lanczos",
                         "-q:v", "3", o], check=True)
@@ -509,13 +512,46 @@ def thumb_candidates(ep_dir, total):
     return outs
 
 
-def youtube(ep_dir):
-    """YouTube に上げるための材料を出す。概要欄はそのまま貼れる形にする。"""
-    name = os.path.basename(ep_dir)
+def youtube_text(ep_dir):
+    """YouTube のタイトルと概要欄を作る。どちらもそのまま貼れる形にする。
+
+    紹介の数行は episode.json の summary から取る。無ければ穴を空けておく
+    （ここだけは書く人が決めることなので、機械で埋めない）。
+    """
     m = meta(ep_dir)
     plan = plan_of(ep_dir)
-    full = os.path.join(ep_dir, "out", "%s.mp4" % name)
-    web = os.path.join(ep_dir, "out", "%s%s.mp4" % (name, DIST_SUFFIX))
+    title = ("%s %s" % (plan.get("program", ""), m["heading"])).strip()
+
+    body = []
+    summary = plan.get("summary")
+    if isinstance(summary, str):
+        summary = [summary]
+    if summary:
+        body += [x for x in summary]
+    else:
+        body.append("（episode.json の summary に2〜3行の紹介を書く）")
+
+    offs, total = chapter_offsets(ep_dir)
+    if offs:
+        body += ["", "チャプター"]
+        for t, label, _ in offs:
+            body.append("%s %s" % (mmss(t), label))
+    cr = script_credits(ep_dir)
+    if cr:
+        body += ["", cr]
+    body += ["",
+             "制作環境: https://github.com/%s" % SOURCE_REPO,
+             "ギャラリー: https://lancard-aikawa.github.io/kokogallery/#%s"
+             % os.path.basename(ep_dir)]
+    return title, NL.join(body), total
+
+
+def youtube(ep_dir):
+    """YouTube に上げるための材料を dist/ に書き出す。"""
+    name = os.path.basename(ep_dir)
+    plan = plan_of(ep_dir)
+    full = layout.full_mp4(ep_dir)
+    web = layout.web_mp4(ep_dir, DIST_SUFFIX)
     poster_p = os.path.join(GALLERY, name, "poster.jpg")
 
     if not os.path.exists(full):
@@ -523,59 +559,54 @@ def youtube(ep_dir):
         print("  python tools/build.py --ep %s all" % ep_dir)
         return 1
 
-    offs, total = chapter_offsets(ep_dir)
+    title, desc, total = youtube_text(ep_dir)
+    tp, dp = layout.youtube_paths(ep_dir)
+    layout.dist_dir(ep_dir, make=True)
+    io.open(tp, "w", encoding="utf-8", newline=NL).write(title + NL)
+    io.open(dp, "w", encoding="utf-8", newline=NL).write(desc + NL)
+
     print("=" * 66)
-    print("タイトル")
+    print(name)
     print("=" * 66)
-    print("%s %s" % (plan.get("program", ""), m["heading"]))
+    print("  タイトル %s" % os.path.relpath(tp, ROOT))
+    print("           %s" % title)
+    # YouTube のタイトルは100字まで。超えると入力欄で切られる
+    if len(title) > 100:
+        print("           ※ %d字。100字を超えているので詰めること" % len(title))
+    print("  概要欄   %s  (%d行)" % (os.path.relpath(dp, ROOT), desc.count(NL) + 1))
+    if not plan.get("summary"):
+        print("           ※ 紹介の数行が空です。episode.json の summary に書く")
     if (plan.get("youtube") or "").strip():
-        print("")
-        print("公開済み: https://youtu.be/%s" % plan["youtube"].strip())
-        print("（episode.json の youtube に入っている。ギャラリーのリンクにも出る）")
-    print("")
-    print("=" * 66)
-    print("概要欄（ここから下をそのまま貼る）")
-    print("=" * 66)
-    body = ["（ここに2〜3行の紹介を書く。研究メモの「なぜここか」から起こすとよい）",
-            "", "チャプター"]
-    for t, label, _ in offs:
-        body.append("%s %s" % (mmss(t), label))
-    cr = script_credits(ep_dir)
-    if cr:
-        body += ["", cr]
-    body += ["",
-             "制作環境: https://github.com/%s" % SOURCE_REPO,
-             "ギャラリー: https://lancard-aikawa.github.io/kokogallery/#%s" % name]
-    print(NL.join(body))
-    print("")
-    print("=" * 66)
-    print("上げるもの")
-    print("=" * 66)
+        print("  公開済み https://youtu.be/%s" % plan["youtube"].strip())
+    else:
+        print("           ※ 公開したら episode.json の youtube に動画IDを入れる")
+        print("             （ギャラリーのリンクがそれで出る）")
+
     br = probe(full, "bit_rate") / 1e6
-    print("  動画   %s" % full)
-    print("         %d:%02d / %.0fMB / %.1f Mbps / 1920x1080"
+    print("  動画     %s" % os.path.relpath(full, ROOT))
+    print("           %d:%02d / %.0fMB / %.1f Mbps / 1920x1080"
           % (total // 60, total % 60, os.path.getsize(full) / 1048576, br))
     if br > 12:
-        print("         ※ 12 Mbps を超えている。YouTube の 1080p30 推奨は 8 Mbps")
+        print("           ※ 12 Mbps を超えている。YouTube の 1080p30 推奨は 8 Mbps")
     if os.path.exists(web):
-        print("  ※ %s%s.mp4 は**上げない**。YouTube 側で再圧縮されるので二重圧縮になる"
-              % (name, DIST_SUFFIX))
-        print("     あれは Releases で直接配るためのもの")
+        print("  ※ %s は**上げない**。YouTube 側で再圧縮されるので二重圧縮になる"
+              % os.path.basename(web))
+        print("     あれはファイルとして直接配るためのもの（Releases）")
     if os.path.exists(poster_p):
         try:
             from PIL import Image
             wh = Image.open(poster_p).size
         except Exception:
             wh = ("?", "?")
-        print("  サムネ %s  (%sx%s)" % (poster_p, wh[0], wh[1]))
-        print("         ※ カスタムサムネイルには電話番号の確認が要る。")
-        print("           未確認だと YouTube が出す自動候補3枚から選ぶことになる。")
+        print("  サムネ   %s  (%sx%s)" % (os.path.relpath(poster_p, ROOT), wh[0], wh[1]))
+        print("           ※ カスタムサムネイルには電話番号の確認が要る。")
+        print("             未確認だと YouTube が出す自動候補3枚から選ぶことになる。")
         thumb_candidates(ep_dir, total)
     else:
-        print("  サムネ なし。python tools/gallery.py build --ep %s" % ep_dir)
+        print("  サムネ   なし。python tools/gallery.py build --ep %s" % ep_dir)
     srt(ep_dir)
-    print("         ※ 字幕は焼き込み済み。SRT は検索と自動翻訳のため。")
-    print("           視聴者が字幕を ON にすると二重に出るので、上げるかは選ぶ")
+    print("           ※ 字幕は焼き込み済み。SRT は検索と自動翻訳のため。")
+    print("             視聴者が字幕を ON にすると二重に出るので、上げるかは選ぶ")
     return 0
 
 
