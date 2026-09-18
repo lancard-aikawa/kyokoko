@@ -210,6 +210,16 @@ def chapters():
         d = json.load(io.open(p, encoding="utf-8"))
         ns = [c["n"] for c in d.get("chapters", [])]
         if ns:
+            # 台本（合成済みの timeline）にある話が chapters に無いと、その話は
+            # 黙って通しから落ちる。雛形の chapters（アバン・第1話・エンディング）の
+            # まま話を足して、第007回で第2・3話の抜けた通しを作りかけた。
+            tl = os.path.join(OUT, "timeline.json")
+            if os.path.exists(tl):
+                spoken = {r["episode"] for r in json.load(io.open(tl, encoding="utf-8"))}
+                missing = sorted(spoken - set(ns))
+                if missing:
+                    sys.exit("episode.json の chapters に無い話が台本にあります: %s\n"
+                             "  chapters に足してから作り直してください" % missing)
             return sorted(ns)
     return [0, 1, 2, 3, 99]
 
