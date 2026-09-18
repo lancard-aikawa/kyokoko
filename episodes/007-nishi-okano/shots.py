@@ -149,7 +149,7 @@ def build(timeline):
          "layers": [now()]},
     ]
     ep0[2]["title"] = {"main": "今日はここに",
-                       "sub": "第007回　横浜 岡野",
+                       "sub": "第007回　横浜 岡野 —「新田に掛かる橋」",
                        "from": TE(9, 0.8), "to": TE(9, 4.8),
                        "size": 108, "subsize": 34, "dim": 150, "y": 0.44}
 
