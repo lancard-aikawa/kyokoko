@@ -15,21 +15,22 @@
 
 **▶ [ギャラリー](https://lancard-aikawa.github.io/kokogallery/)** — ポスターと
 アバン（冒頭）のプレビューがその場で見られます。題からその回へ直接飛べます。
-本編の動画は各回の **[Releases](https://github.com/lancard-aikawa/kokogallery/releases)**
-から（1920x1080 / H.264 / MP4）。
+本編は YouTube で公開しています。**YouTube と Releases の排他**で、YouTube に上げた
+回は Releases に本編を置きません。第001〜005回の本編は以前 Releases に置いていましたが、
+YouTube に移しました（Releases の各ページにもそう書いてあります）。
 
 | 回 | 町 | 題 | 尺 | テーマ／形式 | 見る |
 |---|---|---|---|---|---|
-| 001 | 長崎市大黒町 | [海だった駅前](https://lancard-aikawa.github.io/kokogallery/#001-nagasaki-daikokumachi) | 9分53秒 | 石碑 | **[YouTube](https://youtu.be/f7xuXU-avK0)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/001-nagasaki-daikokumachi) |
-| 002 | 長崎市 眼鏡橋 | [流されないための橋](https://lancard-aikawa.github.io/kokogallery/#002-nagasaki-meganebashi) | 7分04秒 | 石碑 | **[YouTube](https://youtu.be/4qyxsQsx8-s)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/002-nagasaki-meganebashi) |
-| 003 | 佐世保市 針尾送信所 | [つき固めた百年](https://lancard-aikawa.github.io/kokogallery/#003-sasebo-hario) | 8分23秒 | 土木／クエスチョン | **[YouTube](https://youtu.be/YBlXiOLEogM)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/003-sasebo-hario) |
-| 004 | 諫早市 諫早湾 | [出口のない水](https://lancard-aikawa.github.io/kokogallery/#004-isahaya-wan) | 8分14秒 | 地形／クエスチョン | **[YouTube](https://youtu.be/Og2XCHAjWck)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/004-isahaya-wan) |
-| 005 | 諫早市 伊木力 | [石の下のガラス玉](https://lancard-aikawa.github.io/kokogallery/#005-isahaya-ikiriki) | 10分19秒 | 史跡／クエスチョン | **[YouTube](https://youtu.be/w46CJ8AqcOc)** / [本編](https://github.com/lancard-aikawa/kokogallery/releases/tag/005-isahaya-ikiriki) |
-| 006 | 横浜市 神奈川台場 | 陸になった台場 | 9分47秒 | 石碑／クエスチョン | **[YouTube](https://youtu.be/e7nrckVpE8s)** |
+| 001 | 長崎市大黒町 | [海だった駅前](https://lancard-aikawa.github.io/kokogallery/#001-nagasaki-daikokumachi) | 9分53秒 | 石碑 | **[YouTube](https://youtu.be/f7xuXU-avK0)** |
+| 002 | 長崎市 眼鏡橋 | [流されないための橋](https://lancard-aikawa.github.io/kokogallery/#002-nagasaki-meganebashi) | 7分04秒 | 石碑 | **[YouTube](https://youtu.be/4qyxsQsx8-s)** |
+| 003 | 佐世保市 針尾送信所 | [つき固めた百年](https://lancard-aikawa.github.io/kokogallery/#003-sasebo-hario) | 8分23秒 | 土木／クエスチョン | **[YouTube](https://youtu.be/YBlXiOLEogM)** |
+| 004 | 諫早市 諫早湾 | [出口のない水](https://lancard-aikawa.github.io/kokogallery/#004-isahaya-wan) | 8分14秒 | 地形／クエスチョン | **[YouTube](https://youtu.be/Og2XCHAjWck)** |
+| 005 | 諫早市 伊木力 | [石の下のガラス玉](https://lancard-aikawa.github.io/kokogallery/#005-isahaya-ikiriki) | 10分19秒 | 史跡／クエスチョン | **[YouTube](https://youtu.be/w46CJ8AqcOc)** |
+| 006 | 横浜市 神奈川台場 | [陸になった台場](https://lancard-aikawa.github.io/kokogallery/#006-kanagawa-daiba) | 9分47秒 | 石碑／クエスチョン | **[YouTube](https://youtu.be/e7nrckVpE8s)** |
 
 ギャラリーは別リポジトリ（[kokogallery](https://github.com/lancard-aikawa/kokogallery)）。
-**動画そのものを git に入れない**ため、ポスターとプレビューだけを置いて、
-本編は Releases に添付している。書き出しと公開は `tools/gallery.py`。
+**動画そのものを git に入れない**ため、ポスターとプレビューだけを置いている。
+本編は YouTube。書き出しと公開は `tools/gallery.py`。
 
 ## 要るもの
 
@@ -234,7 +235,7 @@ gallery/        公開用のポスターとプレビュー。別リポジトリ�
    画像なので1文字も引っかからない）。視聴者が字幕を ON にすると二重に出るので、
    上げるかは選ぶ。
 
-9. **公開用に軽くする**（ファイルそのものを配るとき）
+9. **公開用に軽くする**（ファイルそのものを配るとき。**YouTube に上げる回では使わない**）
 
    ```
    python tools/build.py --ep episodes/00N-... compact          H.264 / 約半分
@@ -244,6 +245,10 @@ gallery/        公開用のポスターとプレビュー。別リポジトリ�
    dist/ の通しは高画質のまま残り、隣に `-web` / `-hevc` の複製ができる。
    **YouTube に上げるだけなら要らない。** 向こうで再圧縮されるので、
    先に削っておくと二重圧縮になるだけ。
+
+   本編は **YouTube と Releases の排他**（2026-09-18 から）。`episode.json` の
+   `youtube` が入っている回は、`gallery.py release` が止まる。ギャラリーの
+   カード（ポスターとプレビュー）は YouTube の回にも作り、見る先を YouTube に向ける。
 
 ## つまずきどころ
 

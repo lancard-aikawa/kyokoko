@@ -36,7 +36,8 @@
 10 build check               Claude が1枚ずつ絵を見る
 11 本編                      build all
 12 通しを見る                **人。音と絵の両方**
-13 公開                      compact → gallery release → gallery push
+13 公開                      YouTube → episode.json に動画ID → gallery build → gallery push
+                             （本編は YouTube と Releases の排他。YouTube の回は release しない）
 ```
 
 **2〜4 と 9 は Claude が速い。7 と 12 は人にしかできない。**

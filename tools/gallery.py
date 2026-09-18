@@ -281,15 +281,16 @@ def html(ms, repo=None):
             % (d, d, esc(m["heading"]), esc(m["town"]), mm, ss, d, d))
         out.append("<ol>\n%s\n</ol>\n" %
                    "\n".join("<li>%s</li>" % esc(c) for c in m["chapters"]))
-        # YouTube に上げてあれば、まずそこへ誘導する。300MB の
-        # ダウンロードしか案内が無いと、その場で見る手立てが無い。
+        # YouTube に上げた回は、本編を YouTube だけに置く（Releases と排他）。
+        # 第001〜005回は Releases にも置いていたが、YouTube に移した。
         if m.get("youtube"):
             out.append('<a class="yt" href="https://youtu.be/%s">YouTube で見る'
-                       '<small>チャプターつき</small></a>\n'
+                       '<small>チャプターつき</small></a>\n</article>\n'
                        % esc(m["youtube"]))
-        out.append('<a class="dl" href="%s">本編をダウンロード'
-                   '<small>1920x1080 / H.264 / MP4</small></a>\n</article>\n'
-                   % (rel % d))
+        else:
+            out.append('<a class="dl" href="%s">本編をダウンロード'
+                       '<small>1920x1080 / H.264 / MP4</small></a>\n</article>\n'
+                       % (rel % d))
     out.append(foot)
     pth = os.path.join(GALLERY, "index.html")
     io.open(pth, "w", encoding="utf-8").write("".join(out))
@@ -300,13 +301,16 @@ def html(ms, repo=None):
 
 
 def index(ms):
-    """gallery/README.md。GitHub の Releases に置いた本編へ誘導する。"""
+    """gallery/README.md。本編（YouTube、まだ上げていない回は Releases）へ誘導する。"""
     L = ["# 今日はここに",
          "",
          "〒や町名を指定すると、その町の遺構・歴史建造物・地名の由来にまつわる",
          "「碑」の話を集め、読み上げシナリオを作り、VOICEVOX と地図で動画にする。",
          "",
-         "本編は **[Releases](../../releases)** に置いています。",
+         "本編は **YouTube** で公開しています"
+         + ("（[再生リスト](https://www.youtube.com/playlist?list=%s)）。" % PLAYLIST
+            if PLAYLIST else "。"),
+         "第001〜005回の本編は以前 Releases に置いていましたが、YouTube に移しました。",
          "ここに入っているのはポスターと、アバン（掴み）のプレビューだけです。",
          "動画そのものを git に入れると、録り直すたびにリポジトリが本編1本分",
          "太っていくためです。",
@@ -327,7 +331,8 @@ def index(ms):
         links = []
         if m.get("youtube"):
             links.append("**[YouTube で見る](https://youtu.be/%s)**" % m["youtube"])
-        links.append("[本編をダウンロード](../../releases/tag/%s)" % m["dir"])
+        else:
+            links.append("[本編をダウンロード](../../releases/tag/%s)" % m["dir"])
         links.append("[プレビュー（アバン）](%s/preview.mp4)" % m["dir"])
         L += ["", "　/　".join(links), ""]
     L += ["---", "",
@@ -371,6 +376,13 @@ def release(ep_dir, repo=None):
     300MB を投げ終わってから 403 で落ちることになるため。
     """
     repo = repo or REPO
+    # 本編は YouTube と Releases の排他。YouTube に上げた回は Releases に置かない
+    # （2026-09-18 に決めた。第001〜005回の Releases には「YouTube に移した」と書いてある）。
+    yt = (plan_of(ep_dir).get("youtube") or "").strip()
+    if yt:
+        print("%s: YouTube に上げてある回です（https://youtu.be/%s）。"
+              "本編は Releases に置きません" % (os.path.basename(ep_dir), yt))
+        return False
     me = subprocess.run(["gh", "api", "user", "--jq", ".login"],
                         capture_output=True, text=True).stdout.strip()
     owner = repo.split("/")[0]
