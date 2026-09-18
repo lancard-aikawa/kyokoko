@@ -27,6 +27,7 @@ YouTube に移しました（Releases の各ページにもそう書いてあり
 | 004 | 諫早市 諫早湾 | [出口のない水](https://lancard-aikawa.github.io/kokogallery/#004-isahaya-wan) | 8分14秒 | 地形／クエスチョン | **[YouTube](https://youtu.be/Og2XCHAjWck)** |
 | 005 | 諫早市 伊木力 | [石の下のガラス玉](https://lancard-aikawa.github.io/kokogallery/#005-isahaya-ikiriki) | 10分19秒 | 史跡／クエスチョン | **[YouTube](https://youtu.be/w46CJ8AqcOc)** |
 | 006 | 横浜市 神奈川台場 | [陸になった台場](https://lancard-aikawa.github.io/kokogallery/#006-kanagawa-daiba) | 9分47秒 | 石碑／クエスチョン | **[YouTube](https://youtu.be/e7nrckVpE8s)** |
+| 007 | 横浜市西区 岡野 | [新田に掛かる橋](https://lancard-aikawa.github.io/kokogallery/#007-nishi-okano) | 7分38秒 | 地形／クエスチョン | **[YouTube](https://youtu.be/meRAp09Wm0k)** |
 
 ギャラリーは別リポジトリ（[kokogallery](https://github.com/lancard-aikawa/kokogallery)）。
 **動画そのものを git に入れない**ため、ポスターとプレビューだけを置いている。
