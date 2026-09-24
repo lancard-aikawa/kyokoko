@@ -77,11 +77,13 @@ def build(timeline):
     def note(text, a, b):
         return {"text": text, "from": a, "to": b}
 
-    def photo(key, a, b, kb=None, notes=None):
+    def photo(key, a, b, kb=None, notes=None, depth=None):
         d = {"type": "photo", "t0": a, "t1": b, "photo": key,
              "kb": kb or [[a, 1.22, 0.5, 0.5], [b, 1.04, 0.5, 0.5]]}
         if notes:
             d["notes"] = notes
+        if depth is not None:
+            d["depth"] = depth
         return d
 
     pale = {"id": "pale"}
@@ -208,9 +210,13 @@ def build(timeline):
          "notes": [note("住民と専門家が街じゅうの水位を集めた", T(65, 1.0), TE(66)),
                    note("川幅は変えず、両岸の地下にバイパス水路", T(69, 2.0), TE(69, 0.5))]},
 
-        # 3-3a 拾い集めた石
+        # 3-3a 拾い集めた石。手前の飛び石が奥の橋に対してずれて見えるよう奥行きを付ける。
+        #      拾い集めたのは橋の石なので、アーチが切れないよう画角を写真（60度）近くまで
+        #      広げ、視線はわずかに下げるだけにする
+        #      （depth があると kb は使われない。Godot が無い環境では depth を外せば元に戻る）
         photo(P_STONES, T(70), T(73),
-              kb=[[T(70), 1.18, 0.5, 0.55], [T(73), 1.02, 0.45, 0.62]]),
+              kb=[[T(70), 1.18, 0.5, 0.55], [T(73), 1.02, 0.45, 0.62]],
+              depth={"look": -0.035, "view": 58}),
 
         # 3-3b 風頭山の石
         {"t0": T(73), "t1": T(76), "zoom": 16,
