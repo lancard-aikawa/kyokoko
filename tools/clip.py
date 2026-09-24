@@ -424,6 +424,13 @@ def render_photo_shot(shot, timeline, photos, out_path, size=(1920, 1080), fps=3
     k = max(W / src.width, H / src.height) * max(zmax, 1.05)
     base = src.resize((int(src.width * k), int(src.height * k)), Image.LANCZOS)
 
+    # depth があれば背景は Godot が描く（写真に奥行きを付けて動かす）。kb は使わない
+    bg = None
+    if shot.get("depth"):
+        import depth
+        bg = depth.background(shot, os.path.join(photos["_dir"], os.path.basename(meta["path"])),
+                              os.path.dirname(photos["_dir"]), shot["photo"], size, fps)
+
     cmd = ["ffmpeg", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
            "-s", "%dx%d" % (W, H), "-r", str(fps), "-i", "-",
            "-c:v", "libx264", "-preset", "medium", "-crf", "19",
@@ -437,15 +444,18 @@ def render_photo_shot(shot, timeline, photos, out_path, size=(1920, 1080), fps=3
                                                  meta.get("license") or "?")
     for i in range(int(round((t1 - t0) * fps))):
         t = t0 + i / float(fps)
-        s, cx, cy = interp(kb, t)
-        cw, ch = int(W * s), int(H * s)
-        left = int((base.width - cw) * cx)
-        top = int((base.height - ch) * cy)
-        left = max(0, min(left, base.width - cw))
-        top = max(0, min(top, base.height - ch))
-        frame = base.crop((left, top, left + cw, top + ch))
-        if (cw, ch) != (W, H):
-            frame = frame.resize((W, H), Image.LANCZOS)
+        if bg is not None:
+            frame = next(bg)
+        else:
+            s, cx, cy = interp(kb, t)
+            cw, ch = int(W * s), int(H * s)
+            left = int((base.width - cw) * cx)
+            top = int((base.height - ch) * cy)
+            left = max(0, min(left, base.width - cw))
+            top = max(0, min(top, base.height - ch))
+            frame = base.crop((left, top, left + cw, top + ch))
+            if (cw, ch) != (W, H):
+                frame = frame.resize((W, H), Image.LANCZOS)
         d = ImageDraw.Draw(frame, "RGBA")
 
         hide = title_active(shot, t)

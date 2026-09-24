@@ -27,6 +27,9 @@ episodes/*/dist/
 # 地理院タイルのキャッシュと、規約の写し。取り直せる。
 .cache/
 
+# Godot が開いたときに作るインポートのキャッシュ（tools/godot_depth/）。
+.godot/
+
 # ギャラリーの素材（ポスター・プレビュー）。別リポジトリとして公開するので、
 # ここでは追跡しない。中身は python tools/gallery.py build で作り直せる。
 gallery/

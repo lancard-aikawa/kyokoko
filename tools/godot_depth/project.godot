@@ -1,0 +1,21 @@
+; 写真に奥行きを付けて動かすショット (tools/depth.py から呼ぶ)。
+; 解像度は起動時の --resolution で渡すので、ここの値は既定でしかない。
+config_version=5
+
+[application]
+
+config/name="machibura-depth"
+run/main_scene="res://main.tscn"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+
+[editor]
+
+movie_writer/mjpeg_quality=0.95
+
+[rendering]
+
+anti_aliasing/quality/msaa_3d=2

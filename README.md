@@ -42,6 +42,7 @@ YouTube に移しました（Releases の各ページにもそう書いてあり
 | **ffmpeg / ffprobe** | PATH に置く |
 | **日本語フォント** | BIZ UDゴシック → 游ゴシック → メイリオ → Noto Sans CJK → ヒラギノ の順に探す。見つからなければ `KOKO_FONT` で指定する |
 | **gh** | 公開するときだけ（Releases への添付） |
+| **Godot 4** + **uv** | 写真に奥行きを付けるショット（`depth`）を使う回だけ。深度の推定（torch）は uv が使い捨ての環境に入れる。書き方は `docs/episode-files.md` |
 
 環境変数で差し替えられるもの。**どれも既定値で動くので、ふつうは要らない。**
 
@@ -49,6 +50,7 @@ YouTube に移しました（Releases の各ページにもそう書いてあり
 |---|---|
 | `KOKO_FONT` | 日本語フォントのパス（太字・標準の両方に使う） |
 | `KOKO_FONT_BOLD` / `KOKO_FONT_REGULAR` | 別々に指定するとき |
+| `KOKO_GODOT` | Godot の実行ファイルのパス。PATH に `godot` が無いときに |
 | `KOKO_REPO` | 公開先。**fork したら自分のリポジトリを指す**（既定は `lancard-aikawa/kokogallery`）。他人のリポジトリに投げようとすると `gallery.py release` が先に止める |
 
 ## 新しい回を作る

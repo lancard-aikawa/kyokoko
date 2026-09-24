@@ -90,6 +90,9 @@ def check():
             one = dict(sh)
             # 4フレームだけ描いて、その1枚目を取る
             one["t0"], one["t1"] = mid, mid + 4.0 / 30
+            if sh.get("depth"):
+                # 奥行きの動きはショット全体で決まるので、元の範囲を持たせる
+                one["depth"] = dict(sh["depth"], span=[sh["t0"], sh["t1"]])
             tasks.append((i, one, os.path.join(d, "ep%d_shot%d.png" % (ep, i + 1))))
             mids.append(mid)
         for i, png in clip.check_shots(shots, tl, tasks, EP_DIR):
