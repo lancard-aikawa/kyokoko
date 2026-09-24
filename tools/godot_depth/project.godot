@@ -1,5 +1,10 @@
 ; 写真に奥行きを付けて動かすショット (tools/depth.py から呼ぶ)。
-; 解像度は起動時の --resolution で渡すので、ここの値は既定でしかない。
+; 書き出しは常に viewport の 1920x1080。小さい大きさが要るときは depth.py が ffmpeg で縮める。
+;
+; 窓は画面より小さくし、描画だけを viewport の大きさで行う (stretch/mode="viewport")。
+; 窓を 1920x1080 にすると、画面が 1920x1080 の PC では枠の分だけ OS に 1920x1061 へ縮められる。
+; Movie Maker はそれを毎コマ 1080 へ引き伸ばすので、絵が縦に 1.8% 歪み、上下が欠け、書き出しも倍近く遅くなる。
+; --resolution は書き出しの大きさを変えず、--disable-vsync は Movie Maker では効かないので、どちらも使わない。
 config_version=5
 
 [application]
@@ -11,6 +16,10 @@ run/main_scene="res://main.tscn"
 
 window/size/viewport_width=1920
 window/size/viewport_height=1080
+window/size/window_width_override=960
+window/size/window_height_override=540
+window/stretch/mode="viewport"
+window/vsync/vsync_mode=0
 
 [editor]
 

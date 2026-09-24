@@ -1,7 +1,8 @@
 extends Node3D
 ## 深度付きの写真を 1 ショット分動かす。tools/depth.py が Movie Maker で起動する。
 ##   godot --path tools/godot_depth --write-movie <out.avi> --fixed-fps 30
-##         --resolution 1920x1080 --quit-after <frames> -- <params.json>
+##         --quit-after <frames> -- <params.json>
+## 書き出しの大きさは project.godot の viewport (1920x1080) で決まる。
 ## params.json の中身は depth.py の render() を見ること。
 
 var _p: Dictionary

@@ -88,13 +88,17 @@ def prepare(photo_path, ep_dir, key):
     return d
 
 
-def render(depth_dir, params, frames, u0, u1, size, fps):
-    """Godot で背景だけを書き出し、AVI のパスを返す。同じ動きなら作り直さない。"""
+RENDER_SIZE = (1920, 1080)   # godot_depth/project.godot の viewport と同じ。Movie Maker はこの大きさで書く
+
+
+def render(depth_dir, params, frames, u0, u1, fps):
+    """Godot で背景だけを 1920x1080 で書き出し、AVI のパスを返す。同じ動きなら作り直さない。"""
     p = dict(DEFAULTS, **params)
     p.update(data_dir=depth_dir.replace("\\", "/"), frames=frames, u0=u0, u1=u1)
-    # 深度を作り直したら絵も作り直す
+    # 深度を作り直したら絵も作り直す。"viewport" は窓の大きさに依らない描き方に変えた印
+    # (それより前の AVI は、画面の大きさによっては縦に歪んでいるので使わない)
     stamp = os.path.getmtime(os.path.join(depth_dir, "depth.f32"))
-    h = hashlib.sha1(json.dumps([p, size, fps, stamp], sort_keys=True).encode()).hexdigest()[:12]
+    h = hashlib.sha1(json.dumps([p, fps, stamp, "viewport"], sort_keys=True).encode()).hexdigest()[:12]
     avi = os.path.join(depth_dir, "shot_%s.avi" % h)
     if os.path.exists(avi):
         return avi
@@ -107,7 +111,7 @@ def render(depth_dir, params, frames, u0, u1, size, fps):
     # --quit-after は少し多めにし、読む側で frames 枚だけ使う
     r = subprocess.run([godot_exe(), "--path", PROJECT,
                         "--write-movie", tmp + ".avi", "--fixed-fps", str(fps),
-                        "--resolution", "%dx%d" % size, "--quit-after", str(frames + 2),
+                        "--quit-after", str(frames + 2),
                         "--", pj], capture_output=True, text=True, errors="replace")
     os.remove(pj)
     if r.returncode != 0 or not os.path.exists(tmp + ".avi"):
@@ -156,5 +160,8 @@ def background(shot, photo_path, ep_dir, key, size, fps):
     if unknown:
         raise SystemExit("depth に知らないキーがあります: %s（使えるのは %s）"
                          % (sorted(unknown), sorted(DEFAULTS)))
+    # Godot は常に 1920x1080 で描き、frames() が ffmpeg で size に縮める。縦横比が違うと歪むので止める
+    if size[0] * RENDER_SIZE[1] != size[1] * RENDER_SIZE[0]:
+        raise SystemExit("depth ショットは 16:9 でしか書き出せません: %dx%d" % tuple(size))
     d = prepare(photo_path, ep_dir, key)
-    return frames(render(d, params, n, u0, u1, size, fps), n, size)
+    return frames(render(d, params, n, u0, u1, fps), n, size)
