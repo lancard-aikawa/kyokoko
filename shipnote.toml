@@ -1,0 +1,35 @@
+# Shipnote の設定。Pages の LP (/projects/<slug>/) に出す内容。
+# 書き換えたら `shipnote sync` で反映する。
+
+name = "MachiBura"
+github = "lancard-aikawa/kyokoko"
+# slug = "machibura"   # LP の URL。省略すると name から作る
+
+# 一行の紹介 (トップの一覧と LP の見出し下に出る)
+tagline = "〒や町名を指定すると、その町の碑や地形の話を VOICEVOX と地図で動画にする"
+
+# 二〜四文の説明
+description = "〒や町名を指定すると、その町の遺構・歴史建造物・地名の由来にまつわる「碑」の話を集め、読み上げシナリオを作り、VOICEVOX と地図で動画にします。回には「テーマ」（石碑・土木・地形・史跡）と「形式」（対話・クエスチョン）があり、掛け合わせて構成を決めます。調査と台本は Claude との会話で書き、音声合成・作図・公開用の書き出しはコマンドで進めます。番組「今日はここに」の作業リポジトリで、本編は YouTube で公開しています。ポスターとアバン（冒頭）のプレビューは https://lancard-aikawa.github.io/kokogallery/ で見られます。"
+
+features = [
+  "町名を指定すると回の雛形ができる。作った直後でも 40 秒ほどの動画がビルドでき、環境が揃っているか一周して確かめられる",
+  "読み上げは VOICEVOX。合成の前に readings.py が誤読を機械的に止め、BGM はダッキングしてナレーションの下に敷く",
+  "地図は国土地理院のタイル（キャッシュつき）。写真は Wikimedia Commons から取り、作者・ライセンス・出典を記録する",
+  "地図のカメラワーク・写真・字幕・タイトル・立ち絵を描いて連結。--jobs で同時に描き、--ff で ffmpeg のフィルタに任せられる",
+  "公開用に YouTube のタイトルと概要欄、SRT 字幕、ポスターとプレビューを dist/ に書き出す",
+]
+
+# 動く環境 (例: "Windows 10 / 11")
+platforms = "Python 3 (Pillow)・VOICEVOX・ffmpeg。調査と台本には Claude Code"
+
+# リポジトリ内の画像のパス。LP に並ぶ
+screenshots = []
+
+# false にするとトップの一覧から外す (LP とリリース記録は作る)
+listed = true
+
+# false にすると一覧と LP だけ載せ、リリース記録 (/posts/) は作らない (作ってあったものは消す)
+posts = true
+
+# true にすると Claude Code 前提のものとして、「作ったもの」ではなく /claudes/ の一覧に載せる
+claude = true
