@@ -1,9 +1,9 @@
 # Shipnote の設定。Pages の LP (/projects/<slug>/) に出す内容。
 # 書き換えたら `shipnote sync` で反映する。
 
-name = "MachiBura"
+name = "今日はここに"
 github = "lancard-aikawa/kyokoko"
-# slug = "machibura"   # LP の URL。省略すると name から作る
+slug = "kyokoko"   # LP の URL。name が日本語なので GitHub のリポジトリ名にする
 
 # 一行の紹介 (トップの一覧と LP の見出し下に出る)
 tagline = "〒や町名を指定すると、その町の碑や地形の話を VOICEVOX と地図で動画にする"
