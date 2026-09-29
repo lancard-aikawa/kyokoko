@@ -9,7 +9,7 @@ github = "lancard-aikawa/kyokoko"
 tagline = "〒や町名を指定すると、その町の碑や地形の話を VOICEVOX と地図で動画にする"
 
 # 二〜四文の説明
-description = "〒や町名を指定すると、その町の遺構・歴史建造物・地名の由来にまつわる「碑」の話を集め、読み上げシナリオを作り、VOICEVOX と地図で動画にします。回には「テーマ」（石碑・土木・地形・史跡）と「形式」（対話・クエスチョン）があり、掛け合わせて構成を決めます。調査と台本は Claude との会話で書き、音声合成・作図・公開用の書き出しはコマンドで進めます。番組「今日はここに」の作業リポジトリで、本編は YouTube で公開しています。ポスターとアバン（冒頭）のプレビューは https://lancard-aikawa.github.io/kokogallery/ で見られます。"
+description = "〒や町名を指定すると、その町の遺構・歴史建造物・地名の由来にまつわる「碑」の話を集め、読み上げシナリオを作り、VOICEVOX と地図で動画にします。回には「テーマ」（石碑・土木・地形・史跡）と「形式」（対話・クエスチョン）があり、掛け合わせて構成を決めます。調査と台本は Claude との会話で書き、音声合成・作図・公開用の書き出しはコマンドで進めます。番組「今日はここに」の作業リポジトリで、本編は YouTube で公開しています。ポスターとアバン（冒頭）のプレビューはギャラリーで見られます。"
 
 features = [
   "町名を指定すると回の雛形ができる。作った直後でも 40 秒ほどの動画がビルドでき、環境が揃っているか一周して確かめられる",
@@ -33,3 +33,8 @@ posts = true
 
 # true にすると Claude Code 前提のものとして、「作ったもの」ではなく /claudes/ の一覧に載せる
 claude = true
+
+links = [
+  { label = "YouTube の再生リスト", url = "https://www.youtube.com/playlist?list=PLdANPudLNm-c" },
+  { label = "ギャラリー", url = "https://lancard-aikawa.github.io/kokogallery/" },
+]
